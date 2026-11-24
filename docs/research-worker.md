@@ -28,6 +28,8 @@ computer of yours that's always on does it within about 10 minutes and the answe
 Cost: it uses your Claude plan (one headless Claude Code run per symptom, typically 5-15 web searches/fetches).
 
 ## Install
+(Docker install: the container gives you the token with `garage research-token`; see
+[docker.md](docker.md#research-worker), then continue here from step 2.)
 1. In `garage.config.json`: `"research_worker": { "enabled": true }`; then `npm run configure && npm run secrets && npm run deploy`.
    `npm run secrets` stores `RESEARCH_WORKER_TOKEN` on Cloudflare and writes the same token to
    `research-worker/token` (mode 600, git-ignored).

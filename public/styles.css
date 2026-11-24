@@ -571,3 +571,7 @@ body.has-noauth-warning .site-disclaimer { margin-bottom: 140px; }
 .disclaimer-note { margin: 8px 0 0; font-size: .78rem; line-height: 1.35; opacity: .85; }
 .disclaimer-top { padding: 10px 14px; margin: 0 0 12px; border-left: 3px solid #ffb020; }
 .disclaimer-modal .modal { max-width: 520px; }
+
+/* AI_PROVIDER=none (Docker): hide the AI mechanic bits */
+.ai-off .ai-note, .ai-off a[data-ask], .ai-off #dg-generate { display: none !important; }
+.app-version { white-space: nowrap; }

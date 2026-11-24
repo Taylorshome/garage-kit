@@ -36,6 +36,15 @@ node scripts/e2e-local.mjs --none
 ```
 `e2e-local.mjs` refuses to run against anything but 127.0.0.1/localhost.
 
+Docker image, same end-to-end test against the container:
+```bash
+docker build -t garage-kit:dev .
+mkdir -p /tmp/gk && docker run -d --name gk -p 127.0.0.1:8788:8787 -v /tmp/gk:/data -e GARAGE_PASSWORD=kit-test -e AI_PROVIDER=mock garage-kit:dev
+docker exec gk node scripts/seed-demo.mjs
+E2E_BASE=http://127.0.0.1:8788 GARAGE_PASSWORD=kit-test node scripts/e2e-local.mjs
+```
+Without Docker, the same runtime: `npm run docker:bundle && DATA_DIR=/tmp/gk GARAGE_PASSWORD=kit-test AI_PROVIDER=mock npm run docker:start`.
+
 3D previews of the six body styles: `python3 -m http.server` in the kit root, then open `/tools/model-grid.html`
 (`?view=side|front34|rear34`, `&testglb=1` for an uploaded-model test).
 

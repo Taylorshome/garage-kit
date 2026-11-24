@@ -7,6 +7,7 @@ wrangler.jsonc
 .wrangler/
 node_modules/
 build/
+dist/
 backups/
 /research/*
 !/research/README.md
@@ -26,3 +27,6 @@ __pycache__/
 *.rej
 *.orig
 .DS_Store
+# Docker install data and secrets
+garage-data/
+secrets/

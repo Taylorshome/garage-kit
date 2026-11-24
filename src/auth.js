@@ -126,7 +126,7 @@ export function loginPage(env, next, error = '', status = 200) {
 <div class="field"><label for="pw">Household password</label><input id="pw" name="password" type="password" autocomplete="current-password" required autofocus></div>
 <div class="field"><label for="nm">Your name <span class="muted small">(optional; shows who logged what)</span></label><input id="nm" name="name" maxlength="40" autocomplete="nickname"></div>
 <p><button class="btn primary" type="submit">Sign in</button></p></form>
-<p class="small muted">${app} is private. Forgot the password? Whoever set it up can change it with <code>npm run set-password</code>.</p>`, status);
+<p class="small muted">${app} is private. Forgot the password? Whoever set it up can change it (<code>npm run set-password</code>, or GARAGE_PASSWORD in Docker).</p>`, status);
 }
 
 export async function handleAuth(req, env, url) {
@@ -144,7 +144,7 @@ export async function handleAuth(req, env, url) {
     }
     const form = await req.formData();
     const nextF = safeNext(String(form.get('next') || '/'));
-    if (!env.PASSWORD_HASH) return loginPage(env, nextF, 'No password is set yet. Run `npm run set-password` (see the setup-garage skill).', 424);
+    if (!env.PASSWORD_HASH) return loginPage(env, nextF, 'No password is set yet. Cloudflare: run `npm run set-password`. Docker: set GARAGE_PASSWORD (or PASSWORD_HASH) and restart the container.', 424);
     if (!(await verifyPassword(String(form.get('password') || ''), env.PASSWORD_HASH))) {
       console.log('login: wrong password');
       return loginPage(env, nextF, "That password didn't work.", 401);

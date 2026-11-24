@@ -1,0 +1,22 @@
+# Garage kit with Docker Compose. Quick start (docs/docker.md):
+#   cp docker/garage.env.example .env   # then edit it; keep it private (it is git-ignored)
+#   docker compose up -d                # open http://<this machine>:8787
+# Upgrades: docker compose pull && docker compose up -d   (migrations run automatically, with a backup first)
+services:
+  garage:
+    image: ghcr.io/taylorshome/garage-kit:0.1      # or :latest; pin a version to upgrade on your schedule
+    container_name: garage-kit
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    volumes:
+      - ./garage-data:/data                       # database, files, generated keys, backups
+    env_file: .env
+    environment:
+      TZ: ${TZ:-UTC}
+    stop_grace_period: 30s
+    # Secrets as files instead of env vars (Docker/Compose secrets): set GARAGE_PASSWORD_FILE=/run/secrets/garage_password
+    # secrets: [garage_password]
+# secrets:
+#   garage_password:
+#     file: ./secrets/garage_password.txt

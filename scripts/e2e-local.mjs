@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// End-to-end check against a LOCAL `wrangler dev` (never your deployed garage): sign-in, add a car (VIN decode via the
+// End-to-end check against a LOCAL `wrangler dev` or a local Docker container (never your deployed garage): sign-in, add a car (VIN decode via the
 // public NHTSA API), maintenance / due / catch-up / log, a symptom with the first-checks note (mock AI), the 3D model
 // upload, and the MCP server with the full OAuth flow (DCR, PKCE, consent through the same sign-in) and its tools.
 // Setup (see docs/development.md):

@@ -8,7 +8,7 @@
 //   @cf/thinkingmachines/inkling-2-small  vision, 1M context: every field right, 9 s (1 page) / 19 s (2 pages)
 //   @cf/deepseek-ai/deepseek-v4.1-flash-1017  fallback: same accuracy, ~30-45 s, reasons a lot (needs the big max_tokens)
 // glm-5.3 (the mechanic model) has no vision.
-import { parseJsonLoose, textOf, withTimeout } from './ai.js';
+import { AI_OFF_MESSAGE, aiOff, parseJsonLoose, textOf, withTimeout } from './ai.js';
 import { logAnswer } from './answer.js';
 import { matchCar, stripHtml, toText } from './email.js';
 import { deleteFile, putFile, safeName } from './store.js';
@@ -491,6 +491,7 @@ async function readReceipt(env, { id, files, bodyText, fieldsDraft, carRef }) {
     if (!gaps || (!text && !images.length)) return { draft: fieldsDraft, model: null, parse_status: 'fields' };
   }
   if (!text && !images.length) return { draft: fieldsDraft, model: null, parse_status: 'failed', error: notes.join(' ') || 'Nothing readable in the receipt.' };
+  if (aiOff(env)) return { draft: fieldsDraft, model: null, parse_status: fieldsDraft ? 'fields' : 'failed', error: fieldsDraft ? null : `${AI_OFF_MESSAGE} Fill it in by hand.` };
 
   const ask = `Garage cars (today is ${todayLocal()}):\n${carsBrief(cars, items)}\n${carRef ? `\nThe person says this receipt is for car_id "${carRef.id}" (${carRef.nickname}).\n` : ''}`
     + (text ? `\nReceipt text:\n"""\n${text}\n"""\n` : '') + (images.length ? `\nThe receipt ${images.length > 1 ? `photos (${images.length} pages, in order)` : 'photo'} follow${images.length > 1 ? '' : 's'}.` : '');

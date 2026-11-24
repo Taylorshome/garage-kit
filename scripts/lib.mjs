@@ -1,6 +1,6 @@
 // Shared helpers for the kit's scripts: config files, wrangler, D1 queries, SQL literals.
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -34,10 +34,29 @@ export function readWrangler() {
   if (!existsSync(WRANGLER_PATH)) throw new Error('wrangler.jsonc not found. Run: npm run configure');
   return parseJsonc(readFileSync(WRANGLER_PATH, 'utf8'));
 }
-export const dbName = () => readWrangler().d1_databases?.[0]?.database_name || 'garage';
+export const dbName = () => DOCKER ? 'garage' : readWrangler().d1_databases?.[0]?.database_name || 'garage';
+
+// Docker: GARAGE_DOCKER=<container name> (on the host; runs `docker exec`), or "self" inside the container. The
+// d1 commands the scripts use (execute --command / --file, export) then go to the container's database instead of
+// wrangler; --local / --remote don't matter there.
+export const DOCKER = process.env.GARAGE_DOCKER || '';
+function dockerD1(args, input) {
+  const op = args[1] === 'export' ? 'export' : args.includes('--command') ? 'query' : 'exec';
+  const val = f => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : null; };
+  const tables = args.flatMap((a, i) => (a === '--table' ? [args[i + 1]] : []));
+  const sql = op === 'query' ? val('--command') : op === 'exec' ? readFileSync(val('--file'), 'utf8') : '';
+  const cli = ['d1', op, ...(op === 'export' ? tables : [])];
+  const [cmd, argv] = DOCKER === 'self' ? [process.execPath, [join(ROOT, 'docker', 'cli.mjs'), ...cli]] : ['docker', ['exec', '-i', DOCKER, 'garage', ...cli]];
+  const r = spawnSync(cmd, argv, { input: sql ?? input ?? '', encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+  if (r.status !== 0) throw new Error(`garage d1 ${op} (${DOCKER === 'self' ? 'this container' : `container ${DOCKER}`}) failed:\n${(r.stderr || r.stdout || '').trim().slice(-2000)}`);
+  if (op === 'export') { writeFileSync(val('--output'), r.stdout, { mode: 0o600 }); return ''; }
+  return r.stdout;
+}
 
 /** Run wrangler (from the repo's node_modules when present). Returns stdout; throws with stderr on failure. */
 export function wrangler(args, { input, quiet = false } = {}) {
+  if (DOCKER && args[0] === 'd1' && ['execute', 'export'].includes(args[1])) return dockerD1(args, input);
+  if (DOCKER) throw new Error(`wrangler ${args.slice(0, 2).join(' ')} is not available with GARAGE_DOCKER (Docker install)`);
   const local = join(ROOT, 'node_modules', '.bin', 'wrangler');
   const [cmd, pre] = existsSync(local) ? [local, []] : ['npx', ['--yes', 'wrangler']];
   const r = spawnSync(cmd, [...pre, ...args], { cwd: ROOT, input, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });

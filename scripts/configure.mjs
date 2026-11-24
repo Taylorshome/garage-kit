@@ -9,6 +9,7 @@ const IS_MAIN = import.meta.url === `file://${process.argv[1]}`;
 const opts = IS_MAIN ? flags(process.argv.slice(2), ['local', 'check', 'mock-ai', 'mode']) : {};
 const MODES = ['password', 'none', 'cloudflare-access', 'oidc'];
 const PLACEHOLDER = 'local-dev-only';
+const PKG_VERSION = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 
 export function buildWrangler(c, { local = false, mockAi = false } = {}) {
   const errors = [];
@@ -35,12 +36,14 @@ export function buildWrangler(c, { local = false, mockAi = false } = {}) {
     NOTIFY_HOUR: String(Number.isInteger(c.notify_hour) ? c.notify_hour : 8),
     MILEAGE_CHECK: c.mileage_check === false ? 'off' : 'on',
     GLB_MAX_MB: String(c.glb_max_mb || 15),
+    APP_VERSION: PKG_VERSION,
   };
   if (c.my_tools) vars.OWNER_TOOLS = String(c.my_tools).slice(0, 400);
   if (c.domain?.custom_domain) vars.APP_ORIGIN = `https://${c.domain.custom_domain}`;
   const ai = c.ai || {};
   if (ai.chat_model) vars.AI_CHAT_MODEL = ai.chat_model;
   if (ai.chat_fallback) vars.AI_CHAT_FALLBACK = ai.chat_fallback;
+  if (ai.fast_model) vars.AI_FAST_MODEL = ai.fast_model;
   if (ai.vision_model) vars.AI_VISION_MODEL = ai.vision_model;
   if (ai.vision_fallback) vars.AI_VISION_FALLBACK = ai.vision_fallback;
   if (mode === 'cloudflare-access') {

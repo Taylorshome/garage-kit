@@ -1,6 +1,6 @@
 ---
 name: update-garage
-description: Pull upstream changes to this Garage kit and redeploy safely - check for local changes, back up the database, pull, install, run the tests, apply new D1 migrations and deploy to the user's own Cloudflare account. Use when the user says "update", "pull the latest", "upgrade my garage", "redeploy".
+description: Pull upstream changes to this Garage kit and redeploy safely - check for local changes, back up the database, pull, install, run the tests, apply new D1 migrations and deploy to the user's own Cloudflare account; or, for a Docker/Unraid install, move to a newer image (migrations and a backup happen on start). Use when the user says "update", "pull the latest", "upgrade my garage", "redeploy", "new version".
 ---
 
 # Update the garage
@@ -37,3 +37,23 @@ description: Pull upstream changes to this Garage kit and redeploy safely - chec
 9. If something is wrong after deploying: `npx wrangler rollback` returns to the previous Worker version (the database
    migrations stay; they are additive). For data problems: `npx wrangler d1 time-travel restore garage --timestamp <ISO>`
    (undoes everything after that time; ask first).
+
+## Docker / Unraid installs
+
+The container upgrades itself on start: when the new image has new migrations it copies `/data/state` to
+`/data/backups/<time>-before-<migration>/` and then applies them. So an update is "pull the new image, restart":
+1. **What's new**: compare their running version (`docker exec garage-kit node -p "require('/app/package.json').version"`,
+   or Settings -> About) with the latest release (`gh release list -R Taylorshome/garage-kit -L 5`, or the Releases
+   page) and read the CHANGELOG sections in between. Point out anything marked as needing a new setting.
+2. **Extra backup (recommended)**: `docker exec garage-kit garage backup`, or stop the container and copy the data
+   folder.
+3. **Upgrade**: if `compose.yaml` pins `:<major.minor>` (e.g. `:0.1`) and the release is in that line,
+   `docker compose pull && docker compose up -d`. For a new minor version, change the tag in `compose.yaml` first
+   (ask). Unraid: Docker tab -> Check for Updates -> Apply update (the template uses `:latest`).
+4. **Check**: `docker compose logs --tail 30 garage` (look for `migration applied` lines and `listening`), then
+   `curl -s http://localhost:8787/healthz`, open the app (Settings -> About shows the new version), and in a Claude
+   chat with the connector ask "what's due?".
+5. **Roll back** if needed: stop, put the `...-before-...` copy back as `/data/state`, and start the previous tag
+   (docs/docker.md#upgrade). Ask before doing it: anything saved since the upgrade is lost.
+If they also keep a clone of the repo (for research files and scripts): `git pull --ff-only` as in step 3 above;
+no `npm run deploy` for Docker.

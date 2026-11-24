@@ -1,4 +1,5 @@
 // "Ask the mechanic": per-car AI chat, streamed, conversations saved in D1.
+import { AI_OFF_MESSAGE, aiOff } from './ai.js';
 import { logAnswer, robustAnswer } from './answer.js';
 import { carSummary, sortByUrgency } from './due.js';
 import { HttpError, newId, nowSec, str, todayLocal } from './util.js';
@@ -124,6 +125,7 @@ export const CHAT_MAX_TOKENS = 16000;   // glm-5.3 reasoning counts against this
  * failed -> nothing saved (the question stays unanswered and the UI offers "Try again").
  */
 function streamAnswer(env, ctx, chat, hist, { cont = null } = {}) {
+  if (aiOff(env)) throw new HttpError(424, AI_OFF_MESSAGE);
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
   const enc = new TextEncoder();
@@ -173,6 +175,7 @@ async function history(env, chatId) {
 }
 
 async function streamReply(env, ctx, chat, content, member) {
+  if (aiOff(env)) throw new HttpError(424, AI_OFF_MESSAGE);
   await env.DB.prepare('INSERT INTO chat_messages (chat_id, role, content, author, created_at) VALUES (?1, ?2, ?3, ?4, ?5)').bind(chat.id, 'user', content, member.name, nowSec()).run();
   if (chat.title === 'New conversation') await env.DB.prepare('UPDATE chats SET title = ?1 WHERE id = ?2').bind(content.replace(/\s+/g, ' ').slice(0, 60), chat.id).run();
   return streamAnswer(env, ctx, chat, await history(env, chat.id));

@@ -32,7 +32,7 @@ export async function notify(env, { kind = 'info', title, body = '', url = '', h
   const tryCh = async (name, fn) => { if (!on.has(name)) return; try { channels[name] = await fn(); } catch (e) { channels[name] = { ok: false, error: String(e.message).slice(0, 200) }; console.warn(`notify ${name} failed`, e.message); } };
   await tryCh('push', () => sendPushToAll(env));
   await tryCh('home_assistant', () => haNotify(env, { title: t, message: b, url: u ? absUrl(env, u) : absUrl(env, ''), extra: haData }));
-  await tryCh('email', () => emailNotify(env, { title: t, message: b, url: u ? absUrl(env, u) : absUrl(env, '') }));
+  if (env.NOTIFY_EMAIL) await tryCh('email', () => emailNotify(env, { title: t, message: b, url: u ? absUrl(env, u) : absUrl(env, '') }));
   console.log(`notify ${kind}: ${Object.entries(channels).map(([k, v]) => `${k}=${v?.ok === false ? 'fail' : 'ok'}`).join(' ') || 'stored only (no channel enabled)'}`);
   return { id, channels };
 }

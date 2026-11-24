@@ -1,7 +1,7 @@
 # Garage
 
 A car-maintenance app for your household, styled like a video-game garage. It runs on **your own** Cloudflare
-account, and **your own** Claude sets it up, adds your cars and researches them.
+account or **your own** server (Docker, Unraid), and **your own** Claude sets it up, adds your cars and researches them.
 
 <p>
 <img src="docs/images/phone-garage.png" width="220" alt="Garage select screen on a phone">
@@ -19,19 +19,42 @@ a chat with an AI mechanic that knows your car, and a 3D garage (six body styles
 own .glb). Claude can use all of it through the built-in MCP connector: claude.ai, the Claude phone apps, Claude
 Desktop and Claude Code. Full list: [docs/features.md](docs/features.md).
 
+## Choose how to host
+
+| | **Cloudflare** (the original) | **Docker / Unraid** |
+|---|---|---|
+| Runs on | your free Cloudflare account (Workers, D1, KV) | your own machine: `docker run`, Compose, or the Unraid template |
+| Public HTTPS (for Claude connectors and iPhone notifications) | built in (`*.workers.dev` or your domain) | add one: Cloudflare Tunnel, Tailscale Funnel or a reverse proxy |
+| AI (mechanic, first checks, receipts) | Workers AI on your account (free daily allowance) | your choice: Ollama / any OpenAI-compatible server, the Claude API, Workers AI over REST, or off |
+| Email-in | Cloudflare Email Routing on your domain | IMAP polling of a mailbox |
+| Data | in your Cloudflare account | in one folder (`/data`) on your machine |
+| Updates | `git pull` + deploy (the update skill) | pull the new image; migrations run by themselves, with a backup first |
+
+Both run the same app code. Docker images are published for every [release](https://github.com/Taylorshome/garage-kit/releases)
+at `ghcr.io/taylorshome/garage-kit` (amd64 + arm64). Docker details: [docs/docker.md](docs/docker.md).
+
 ## Get started
 
 1. Clone this repo.
 2. Open [Claude Code](https://claude.com/claude-code) in the folder.
-3. Say **"set up my garage"**.
+3. Say **"set up my garage"** (or "set up my garage with Docker").
 
-Claude checks Node, logs you in to your Cloudflare account (`wrangler login`), asks a few questions (name, sign-in,
-optional extras), creates the database, deploys, connects itself to the app, and then helps you add your first car
-and research it. Nothing goes through anyone else's account, server or Claude subscription.
+For Cloudflare, Claude checks Node, logs you in to your Cloudflare account (`wrangler login`), asks a few questions
+(name, sign-in, optional extras), creates the database, deploys, connects itself to the app, and then helps you add
+your first car and research it. For Docker it writes a compose file and settings with you, starts the container and
+helps you set up HTTPS. Nothing goes through anyone else's account, server or Claude subscription.
+
+Docker without Claude Code:
+```bash
+docker run -d --name garage-kit -p 8787:8787 -v "$PWD/garage-data:/data" \
+  -e TZ=America/Chicago -e GARAGE_PASSWORD='a-long-household-password' ghcr.io/taylorshome/garage-kit:0.1
+```
 
 Want to look first? `npm ci && npm run demo` runs it locally with a fake demo car (see [docs/development.md](docs/development.md)).
 
 ## What it costs
+
+On Docker: your own hardware, plus whatever AI provider you pick (Ollama on your own machine is free). On Cloudflare:
 
 - **Cloudflare Workers free plan** is plenty for a household: 100,000 requests/day, D1 and KV free tiers. The
   Workers Paid plan ($5/month) is only needed for heavy use.
@@ -48,11 +71,13 @@ Want to look first? `npm ci && npm run demo` runs it locally with a fake demo ca
 |---|---|
 | Sign-in: household password (default), Cloudflare Access, your own OIDC provider, or none (with loud warnings) | nothing extra for the password |
 | Notifications (web push): due reminders, monthly mileage check, research results | nothing; on iPhone add the app to the Home Screen |
-| Email-in: forward receipts and scan-tool reports | your own domain on Cloudflare + Email Routing |
-| Home Assistant notifications and a "due" sensor | HA reachable from the internet (Nabu Casa or a Cloudflare Tunnel) |
+| Email-in: forward receipts and scan-tool reports | Cloudflare: your own domain + Email Routing. Docker: an IMAP mailbox |
+| Home Assistant notifications and a "due" sensor | Cloudflare: HA reachable from the internet (Nabu Casa or a Cloudflare Tunnel). Docker: HA on your LAN is fine |
 | Automatic research of every new symptom | an always-on computer (Mac, Linux box, Raspberry Pi) with Claude Code |
 
-Details: [docs/integrations.md](docs/integrations.md), [docs/research-worker.md](docs/research-worker.md).
+Details: [docs/integrations.md](docs/integrations.md), [docs/research-worker.md](docs/research-worker.md), [docs/docker.md](docs/docker.md).
+
+What changed in each version: [CHANGELOG.md](CHANGELOG.md).
 
 ## Disclaimer
 

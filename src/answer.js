@@ -53,14 +53,16 @@ async function attempt(env, model, messages, { maxTokens, temperature, extra = {
  *   onReset()      the client should clear what it shows (a fresh retry / fallback starts over)
  *   onStatus(msg)  short progress note ("The answer was cut off, continuing…")
  *   onReasoning()  the model is thinking (keep-alive tick)
+ * primary: the first model to try (default the chat model; first checks use the fast model).
  * extra: more model params, e.g. { reasoning_effort: 'low' } (plan generation: glm-5.3 otherwise spends the whole budget reasoning).
  * Returns { text, status: ok|truncated|failed, outcome: clean|recovered|truncated|failed, model, trace, error }.
  */
-export async function robustAnswer(env, messages, { maxTokens = 16000, temperature = 0.4, partial = '', hooks = {}, limits = LIMITS, extra = {} } = {}) {
+export async function robustAnswer(env, messages, { maxTokens = 16000, temperature = 0.4, partial = '', hooks = {}, limits = LIMITS, extra = {}, primary = null } = {}) {
   const deadline = Date.now() + limits.totalMs;
   const trace = [];
   let text = String(partial || '');
-  let model = MODEL, lastError = null;
+  const PRIMARY = primary || MODEL;
+  let model = PRIMARY, lastError = null;
 
   // Each step: which model, and whether it continues `text` or starts over.
   const run = async (m, mode) => {
@@ -99,10 +101,10 @@ export async function robustAnswer(env, messages, { maxTokens = 16000, temperatu
   };
 
   // 1. primary: fresh answer, or continue the given partial
-  let r = await run(MODEL, text ? 'continue' : 'fresh');
+  let r = await run(PRIMARY, text ? 'continue' : 'fresh');
   // 2. one automatic continue (cut off) or retry (empty) on the primary model
-  if (r === 'truncated') { hooks.onStatus?.('The answer was cut off, continuing…'); r = await run(MODEL, 'continue'); }
-  else if (r === 'empty') { hooks.onStatus?.('No answer came back, asking again…'); r = await run(MODEL, text.trim().length >= NEAR_EMPTY ? 'continue' : 'fresh'); }
+  if (r === 'truncated') { hooks.onStatus?.('The answer was cut off, continuing…'); r = await run(PRIMARY, 'continue'); }
+  else if (r === 'empty') { hooks.onStatus?.('No answer came back, asking again…'); r = await run(PRIMARY, text.trim().length >= NEAR_EMPTY ? 'continue' : 'fresh'); }
   // 3. fallback model: continue a usable partial, else answer fresh
   if (r !== 'ok') {
     hooks.onStatus?.('Trying the backup model…');

@@ -1,11 +1,13 @@
 {
   "name": "garage-kit",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "license": "MIT",
-  "description": "A household car-maintenance app you deploy to your own Cloudflare account, set up and researched with your own Claude.",
-  "engines": { "node": ">=22.5" },
+  "description": "A household car-maintenance app you run yourself (your own Cloudflare account, or Docker / Unraid), set up and researched with your own Claude.",
+  "engines": {
+    "node": ">=22.5"
+  },
   "scripts": {
     "configure": "node scripts/configure.mjs",
     "secrets": "node scripts/secrets.mjs",
@@ -18,11 +20,17 @@
     "backup": "node scripts/backup.mjs",
     "test": "node --test test/*.test.mjs && python3 -m unittest research-worker/test_worker.py",
     "test:js": "node --test test/*.test.mjs",
-    "test:e2e": "node scripts/e2e-local.mjs"
+    "test:e2e": "node scripts/e2e-local.mjs",
+    "docker:bundle": "wrangler deploy --dry-run --outdir dist/worker --config wrangler.docker.jsonc",
+    "docker:start": "node docker/server.mjs"
   },
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "1.2.4",
-    "postal-mime": "^2.7.6"
+    "imapflow": "2.12.2",
+    "miniflare": "5.20261123.1-beta",
+    "postal-mime": "^2.7.6",
+    "undici": "7.30.2",
+    "unpdf": "1.9.1"
   },
   "devDependencies": {
     "wrangler": "^4.69.0"

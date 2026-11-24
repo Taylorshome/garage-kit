@@ -1,5 +1,6 @@
 // Shared garage operations used by both the web API (api.js) and the MCP tools (mcp.js),
 // so a change made from Claude is recorded exactly like one made in the app.
+import { FAST_MODEL, aiOff } from './ai.js';
 import { logAnswer, robustAnswer } from './answer.js';
 import { carContext, systemPrompt } from './mechanic.js';
 import { HttpError, date, int, newId, nowSec, sha256Hex, str, todayLocal } from './util.js';
@@ -111,11 +112,12 @@ export async function createSymptom(env, ctx, car, input, reporter, reporterId =
   if (where.length) lines.push(`Where: ${where.map(k => WHERES[k]).join(', ')}`);
   const id = newId();
   await env.DB.prepare(`INSERT INTO todos (id, car_id, title, notes, priority, status, created_at, source, type, symptom, reporter, mileage, text_hash, ai_status, reporter_id)
-    VALUES (?1, ?2, ?3, ?4, ?5, 'open', ?6, 'symptom', 'symptom', ?7, ?8, ?9, ?10, 'pending', ?11)`)
-    .bind(id, car.id, title, lines.join('\n'), priority, nowSec(), JSON.stringify({ kind, when, where }), reporter || null, mileage, hash, reporterId).run();
+    VALUES (?1, ?2, ?3, ?4, ?5, 'open', ?6, 'symptom', 'symptom', ?7, ?8, ?9, ?10, ?11, ?12)`)
+    .bind(id, car.id, title, lines.join('\n'), priority, nowSec(), JSON.stringify({ kind, when, where }), reporter || null, mileage, hash, aiOff(env) ? null : 'pending', reporterId).run();
   await env.DB.prepare('UPDATE todos SET ai_updated_at = ?1 WHERE id = ?2').bind(nowSec(), id).run();
   const research = await queueJob(env, id, reporter);   // deep web research: the background worker, or your Claude by hand
   if (mileage != null) await env.DB.prepare('UPDATE cars SET mileage = ?1, mileage_updated_at = ?2 WHERE id = ?3 AND (mileage IS NULL OR mileage < ?1)').bind(mileage, todayLocal(), car.id).run();
+  if (aiOff(env)) return { id, duplicate: false, ai_status: null, priority, research: research.status };
   const job = aiFirstChecks(env, id).catch(e => console.error('first-checks failed', e.message));
   if (ctx?.waitUntil) ctx.waitUntil(job); else await job;
   return { id, duplicate: false, ai_status: 'pending', priority, research: research.status };
@@ -144,7 +146,7 @@ Reply in under 250 words, markdown:
 2. **OK to drive?** one line (say plainly if it should not be driven).
 3. **Tell me next**: the one or two details that would narrow it down.
 Use the research findings and history above and cite them briefly; mark anything else as general knowledge. Don't invent part numbers or torque specs.`;
-    result = await robustAnswer(env, [{ role: 'system', content: systemPrompt(text) }, { role: 'user', content: ask }], { maxTokens: FIRST_CHECKS_MAX_TOKENS, temperature: 0.3, partial });
+    result = await robustAnswer(env, [{ role: 'system', content: systemPrompt(text) }, { role: 'user', content: ask }], { maxTokens: FIRST_CHECKS_MAX_TOKENS, temperature: 0.3, partial, primary: FAST_MODEL });
   } catch (e) {
     result = { status: 'failed', outcome: 'failed', model: null, error: e.message, trace: [{ result: 'error', error: String(e.message).slice(0, 200) }] };
   }

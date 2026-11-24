@@ -7,6 +7,7 @@
 // test/diagnosis.test.mjs; the DB parts run against SQLite there too.
 import { HttpError, int, newId, nowSec, str, todayLocal } from './util.js';
 import { queryTerms, stem, tokens } from './research-context.js';
+import { AI_OFF_MESSAGE, aiOff } from './ai.js';
 import { robustAnswer, logAnswer } from './answer.js';
 import { carContext, systemPrompt } from './mechanic.js';
 import { createTodo } from './ops.js';
@@ -612,6 +613,7 @@ Reply with ONLY one JSON object, no prose:
 /** One model call (through robustAnswer), validated and stored. Throws HttpError with the reasons when unusable. */
 export async function generatePlan(env, car, symptom, member, { limits = GEN_LIMITS } = {}) {
   if (!str(symptom, 300)) throw new HttpError(400, 'Describe the symptom to build a plan for.');
+  if (aiOff(env)) throw new HttpError(424, `${AI_OFF_MESSAGE} Pick one of the ready-made plans.`);
   // a car without its own research (e.g. a second car of the same model) borrows the research of a car with the same year/make/model
   let ctxCar = car.id;
   if (!await env.DB.prepare('SELECT 1 FROM research WHERE car_id = ?1').bind(car.id).first()) {

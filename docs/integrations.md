@@ -52,6 +52,8 @@ An hourly cron trigger runs this (added to `wrangler.jsonc` only when a notifica
 
 ## Email-in
 Forward receipts (shop invoices, parts orders, photos) and scan-tool reports to an address on your own domain.
+(Docker: no domain needed; the container polls a mailbox over IMAP instead. See [docker.md](docker.md#email-in-imap).
+Settings in this file are for the Cloudflare deploy; Docker takes environment variables, listed in docker.md.)
 1. Your domain must be on Cloudflare. Dashboard -> the domain -> **Email** -> **Email Routing** -> enable (it adds MX
    and SPF records).
 2. `integrations.email = { "enabled": true, "address": "garage@yourdomain.com" }`. Configure + deploy.

@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>garage-kit</Name>
+  <Repository>ghcr.io/taylorshome/garage-kit:latest</Repository>
+  <Registry>https://github.com/Taylorshome/garage-kit/pkgs/container/garage-kit</Registry>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/Taylorshome/garage-kit/issues</Support>
+  <Project>https://github.com/Taylorshome/garage-kit</Project>
+  <Overview>Garage kit: a household car-maintenance app (maintenance schedules and what's due, service history, symptoms, receipts read from photos, parts, guided diagnosis, an AI mechanic, a 3D garage) with an MCP server so Claude can use it. Self-hosted: your data stays in /mnt/user/appdata/garage-kit. AI is optional: Ollama on this server, the Claude API, Workers AI on your own Cloudflare account, or off. Not professional advice: verify before acting and do all work at your own risk. Setup and HTTPS options: https://github.com/Taylorshome/garage-kit/blob/main/docs/docker.md</Overview>
+  <Category>HomeAutomation: Productivity: Tools:</Category>
+  <WebUI>http://[IP]:[PORT:8787]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/Taylorshome/garage-kit/main/unraid/garage-kit.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/Taylorshome/garage-kit/main/public/icon-512.png</Icon>
+  <ExtraParams>--user 99:100 --stop-timeout 30</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <Requires>Optional: a reverse proxy (Nginx Proxy Manager, SWAG), a Cloudflare Tunnel or Tailscale Funnel for public HTTPS, needed for Claude connectors and iPhone notifications.</Requires>
+  <Config Name="Web UI port" Target="8787" Default="8787" Mode="tcp" Description="Port for the web app." Type="Port" Display="always" Required="true" Mask="false">8787</Config>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/garage-kit" Mode="rw" Description="Database, uploaded files, generated keys and automatic backups. Back this folder up." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/garage-kit</Config>
+  <Config Name="Household password" Target="GARAGE_PASSWORD" Default="" Mode="" Description="The one password everyone in the house signs in with (AUTH_MODE=password). At least 8 characters." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="Public URL" Target="PUBLIC_URL" Default="" Mode="" Description="Your public HTTPS address, e.g. https://garage.example.com (no trailing slash). Needed for Claude connectors and phone notifications. Empty = LAN only." Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="Behind a reverse proxy" Target="TRUST_PROXY" Default="0|1" Mode="" Description="1 when Nginx Proxy Manager, SWAG or a tunnel sits in front (trust X-Forwarded-* headers). 0 otherwise." Type="Variable" Display="always" Required="false" Mask="false">0</Config>
+  <Config Name="Time zone" Target="TZ" Default="America/Chicago" Mode="" Description="IANA time zone for due dates and the daily reminder, e.g. America/New_York, Europe/London." Type="Variable" Display="always" Required="false" Mask="false">America/Chicago</Config>
+  <Config Name="App name" Target="APP_NAME" Default="Garage" Mode="" Description="Shown in the app and on the phone home screen." Type="Variable" Display="always" Required="false" Mask="false">Garage</Config>
+  <Config Name="AI provider" Target="AI_PROVIDER" Default="none|openai-compatible|anthropic|cloudflare-rest" Mode="" Description="none = AI features hidden. openai-compatible = Ollama, LM Studio, OpenAI, OpenRouter. anthropic = Claude API. cloudflare-rest = Workers AI on your own Cloudflare account." Type="Variable" Display="always" Required="false" Mask="false">none</Config>
+  <Config Name="AI base URL" Target="AI_BASE_URL" Default="" Mode="" Description="openai-compatible only, e.g. http://192.168.1.10:11434/v1 for Ollama on this server." Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="AI chat model" Target="AI_CHAT_MODEL" Default="" Mode="" Description="The mechanic's model, e.g. qwen3:14b (Ollama). Empty = the provider's default (anthropic, cloudflare-rest)." Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="AI vision model" Target="AI_VISION_MODEL" Default="" Mode="" Description="Reads receipt photos, e.g. qwen2.5vl:7b (Ollama). Empty = the chat model / provider default." Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="AI fast model" Target="AI_FAST_MODEL" Default="" Mode="" Description="Cheaper/faster model for first checks and email reading, e.g. qwen3:8b. Empty = the chat model." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="AI API key" Target="AI_API_KEY" Default="" Mode="" Description="openai-compatible: the server's API key, if it needs one (OpenAI, OpenRouter). Ollama needs none." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="Anthropic API key" Target="ANTHROPIC_API_KEY" Default="" Mode="" Description="AI_PROVIDER=anthropic: your Claude API key (console.anthropic.com). Usage is billed to you." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="Cloudflare account ID" Target="CF_ACCOUNT_ID" Default="" Mode="" Description="AI_PROVIDER=cloudflare-rest: your Cloudflare account ID." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Cloudflare API token" Target="CF_API_TOKEN" Default="" Mode="" Description="AI_PROVIDER=cloudflare-rest: an API token with Workers AI Read + Edit." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="Sign-in mode" Target="AUTH_MODE" Default="password|oidc|cloudflare-access|none" Mode="" Description="password (recommended), oidc (your identity provider: set OIDC_ISSUER, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET), cloudflare-access, or none (anyone who can reach it can change everything)." Type="Variable" Display="advanced" Required="false" Mask="false">password</Config>
+  <Config Name="IMAP host" Target="IMAP_HOST" Default="" Mode="" Description="Email-in (receipts, scan reports): a mailbox only the garage reads, e.g. imap.gmail.com. Empty = off." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="IMAP user" Target="IMAP_USER" Default="" Mode="" Description="Email-in: the mailbox login (usually its address)." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="IMAP password" Target="IMAP_PASS" Default="" Mode="" Description="Email-in: the mailbox password (an app password for Gmail/iCloud/Outlook)." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="Home Assistant URL" Target="HA_URL" Default="" Mode="" Description="Optional notifications through Home Assistant, e.g. http://192.168.1.20:8123 (LAN is fine)." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Home Assistant token" Target="HA_TOKEN" Default="" Mode="" Description="A long-lived access token from your HA profile." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="Home Assistant notify targets" Target="HA_NOTIFY_TARGETS" Default="" Mode="" Description="Comma-separated notify services without 'notify.', e.g. mobile_app_my_phone." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+</Container>

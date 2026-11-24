@@ -5,10 +5,17 @@ export const DEFAULT_MODEL = '@cf/zai-org/glm-5.3';
 export const DEFAULT_FALLBACK = '@cf/openai/gpt-oss-120b';
 export let MODEL = DEFAULT_MODEL;
 export let FALLBACK_MODEL = DEFAULT_FALLBACK;
+// The cheap/fast model (AI_FAST_MODEL): symptom first checks and email extraction. Defaults to the chat model.
+export let FAST_MODEL = DEFAULT_MODEL;
 export function configureChatModels(env) {
   MODEL = env?.AI_CHAT_MODEL || DEFAULT_MODEL;
   FALLBACK_MODEL = env?.AI_CHAT_FALLBACK || DEFAULT_FALLBACK;
+  FAST_MODEL = env?.AI_FAST_MODEL || MODEL;
 }
+
+/** AI_PROVIDER=none (Docker): every AI feature is switched off and the UI hides it. Cloudflare deploys never set it. */
+export const aiOff = env => String(env?.AI_PROVIDER || '').trim().toLowerCase() === 'none';
+export const AI_OFF_MESSAGE = 'AI is turned off for this garage (AI_PROVIDER=none).';
 
 /** Reject with a TimeoutError-ish Error if p hasn't settled within ms. */
 export function withTimeout(p, ms, what = 'request') {
@@ -19,7 +26,7 @@ export function withTimeout(p, ms, what = 'request') {
 
 /** One non-streamed call with a timeout, falling back to the second model on any error (used by email extraction). */
 export async function runWithFallback(env, body, { timeoutMs = 90_000 } = {}) {
-  try { return { model: MODEL, res: await withTimeout(env.AI.run(MODEL, body), timeoutMs, MODEL) }; }
+  try { return { model: FAST_MODEL, res: await withTimeout(env.AI.run(FAST_MODEL, body), timeoutMs, FAST_MODEL) }; }
   catch (e) {
     console.warn('primary model failed', e.message);
     return { model: FALLBACK_MODEL, res: await withTimeout(env.AI.run(FALLBACK_MODEL, body), timeoutMs, FALLBACK_MODEL) };

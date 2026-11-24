@@ -84,12 +84,12 @@ async function health(env) {
     ]);
     const by = Object.fromEntries(ai.results.map(r => [r.outcome, r.n]));
     const j = jobs.results[0] || {};
-    return { ok: true, db: true, cars: cars.results[0].n, time: new Date().toISOString(),
+    return { ok: true, db: true, version: env.APP_VERSION || null, cars: cars.results[0].n, time: new Date().toISOString(),
       ai: { failed: by.failed || 0, truncated: by.truncated || 0, recovered: by.recovered || 0 },
       research: { queued: j.queued || 0, running: j.running || 0, stuck: j.stuck || 0 } };
   } catch (e) {
     console.error('health: D1 failed', e.message);
-    return { ok: false, db: false, error: String(e.message).slice(0, 200) };
+    return { ok: false, db: false, version: env.APP_VERSION || null, error: String(e.message).slice(0, 200) };
   }
 }
 

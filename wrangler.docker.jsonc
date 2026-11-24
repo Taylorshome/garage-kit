@@ -1,0 +1,10 @@
+// Bundle-only config for the Docker image: `npm run docker:bundle` (wrangler deploy --dry-run) writes
+// dist/worker/docker.js, which docker/server.mjs runs in workerd. Bindings are supplied by the server, not here.
+// Never used to deploy.
+{
+  "name": "garage-docker",
+  "main": "src/docker.js",
+  "compatibility_date": "2026-10-06",
+  "compatibility_flags": ["nodejs_compat"],
+  "no_bundle": false
+}

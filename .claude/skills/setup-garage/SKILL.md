@@ -1,11 +1,12 @@
 ---
 name: setup-garage
-description: Set up this Garage kit for the user, end to end - check prerequisites, log in to THEIR Cloudflare account, choose the name, sign-in mode and integrations, create D1/KV, set secrets, deploy, connect Claude (claude.ai, mobile, Claude Code), then add their first car. Also covers turning on or changing one piece later (password, sign-in mode, notifications, email-in, Home Assistant, automatic research, custom domain). Use when the user says "set up my garage", "install", "deploy this", or asks to change any of those settings.
+description: Set up this Garage kit for the user, end to end - on Cloudflare or in Docker/Unraid. Check prerequisites, log in to THEIR Cloudflare account (or write their Docker compose file and settings), choose the name, sign-in mode and integrations, create D1/KV, set secrets, deploy, connect Claude (claude.ai, mobile, Claude Code), then add their first car. Also covers turning on or changing one piece later (password, sign-in mode, notifications, email-in, Home Assistant, automatic research, custom domain). Use when the user says "set up my garage", "install", "deploy this", or asks to change any of those settings.
 ---
 
 # Set up the garage
 
-You are installing the user's **own** copy on **their own** Cloudflare account. Talk to them in plain words, one
+You are installing the user's **own** copy on **their own** Cloudflare account, or in Docker on **their own**
+machine (part D). Talk to them in plain words, one
 decision at a time, and recommend a default for each. Each numbered part below also works on its own (e.g. "turn on
 notifications" = parts 2, 4 and 8c only).
 
@@ -24,6 +25,16 @@ Before anything else, show this and ask them to confirm they understand (the app
 > before acting, follow safety precautions, and do all work at your own risk.**
 
 Also mention the kit is MIT-licensed and provided as-is, with no warranty.
+
+## Which host?
+
+Ask which they want, and recommend by situation:
+- **Cloudflare** (default; parts 1-9): nothing to keep running at home, HTTPS built in, free tier is plenty. Needs a
+  free Cloudflare account.
+- **Docker / Unraid** (part D): they already run a home server (Unraid, a NAS, a Linux box, a Pi 4/5) and want the
+  data at home, or want to use their own AI (Ollama) or no AI. Public HTTPS for Claude connectors and iPhone
+  notifications is extra setup (a Cloudflare Tunnel, Tailscale Funnel or their reverse proxy).
+Both run the same app. Then follow parts 1-9 (Cloudflare) or part D (Docker).
 
 ## 1. Prerequisites
 
@@ -227,6 +238,77 @@ On the always-on machine (can be this one), which needs Python 3 and Claude Code
 `npm run backup` exports the whole database to `backups/d1/` (git-ignored). D1 also keeps 30 days of point-in-time
 history (`npx wrangler d1 time-travel info garage`). If they have the always-on computer, offer a nightly cron for
 `npm run backup` there.
+
+## D. Docker / Unraid
+
+Reference for every setting: `docs/docker.md`. Same rules as above: secrets are typed by the user **in their own
+terminal** (or the Unraid form, which masks them), never in the chat, and you never `cat` `.env` or secret files.
+
+### D1. Where and how
+- **Unraid**: they use the template (docs/docker.md#unraid): walk them through it, field by field (password, time
+  zone, AI, PUBLIC_URL later). Skip to D4.
+- **Docker / Compose on Linux, a NAS or a Pi**: check `docker version` and `docker compose version` there (if you
+  run on another computer, they run the commands and tell you the output). Pick a folder, e.g. `~/garage`.
+
+### D2. Write the compose file and settings (interview as in part 2, adapted)
+Ask: app name, time zone (detect it), sign-in mode (recommend password; same warnings for `none`), AI provider:
+- `none` to start (AI parts hidden) - fine, they can add it later;
+- **Ollama** (or LM Studio) if they run it: ask for its LAN address and which models they pulled
+  (`ollama list`); recommend `qwen3:14b` (GPU with ~12 GB) or `qwen3:8b`, and `qwen2.5vl:7b` for receipt photos;
+  remind them to set `OLLAMA_CONTEXT_LENGTH=16384` on Ollama; CPU-only is slow (docs/docker.md#ollama);
+- **Claude API** (`anthropic`, billed to their API key) or **Workers AI over REST** (`cloudflare-rest`, their own
+  Cloudflare account, free daily allowance).
+Then, in their folder, write `compose.yaml` (copy the repo's `compose.yaml`; image `ghcr.io/taylorshome/garage-kit:<major.minor>`
+of the latest release) with a `secrets:` block for each secret, and a `.env` with **only non-secret values**
+(APP_NAME, TZ, AUTH_MODE, PUBLIC_URL, TRUST_PROXY, AI_PROVIDER, AI_BASE_URL, model names, IMAP_HOST/USER, HA_URL...)
+plus `GARAGE_PASSWORD_FILE=/run/secrets/garage_password` (and `ANTHROPIC_API_KEY_FILE`, `AI_API_KEY_FILE`,
+`CF_API_TOKEN_FILE`, `IMAP_PASS_FILE`, `HA_TOKEN_FILE` as needed, each pointing at `/run/secrets/<name>`).
+Example secrets block:
+```yaml
+    secrets: [garage_password]
+secrets:
+  garage_password:
+    file: ./secrets/garage_password
+```
+`chmod 600 .env`. Make sure `garage-data/`, `secrets/` and `.env` are never committed anywhere.
+
+### D3. Secrets, typed by them
+Ask them to run this **in their own terminal**, in that folder, once per secret (it doesn't echo):
+```bash
+mkdir -p secrets && chmod 700 secrets
+read -rs -p "Household password: " v && printf '%s' "$v" > secrets/garage_password && unset v && chmod 644 secrets/garage_password && echo
+```
+(644 inside the 700 folder: the container's user can read the mounted file, other users on the host can't reach it.)
+Same pattern for an API key or IMAP app password, with its own file name.
+
+### D4. Start and check
+```bash
+docker compose up -d && docker compose logs --tail 30 garage
+```
+Look for `listening on 0.0.0.0:8787`; fix anything under "configuration problems". Then
+`curl -s http://localhost:8787/healthz` -> `{"ok":true}`. Ask them to open `http://<host>:8787`, sign in, and say
+what they see. (Optional first look: `docker exec garage-kit node scripts/seed-demo.mjs`.)
+
+### D5. HTTPS, then connect Claude
+Claude connectors and iPhone notifications need public HTTPS (docs/docker.md#https). Recommend by what they have:
+a domain on Cloudflare -> **Cloudflare Tunnel** (`docker/compose.cloudflared.yaml`; the tunnel token goes in a secret
+or `.env` typed by them); Tailscale already -> **Tailscale Funnel**; Unraid with Nginx Proxy Manager/SWAG -> a proxy
+host. Then set `PUBLIC_URL=https://...` and `TRUST_PROXY=1` in `.env` and `docker compose up -d`. Check:
+`curl -s https://<their host>/.well-known/oauth-protected-resource/mcp` shows their address. Then connect Claude
+exactly as in part 7.4 with `https://<their host>/mcp`. Phones: Add to Home Screen, then Settings -> Notifications
+(push turns on automatically once PUBLIC_URL is https; optionally set `VAPID_SUBJECT=mailto:<their email>`).
+
+### D6. Optional pieces
+- **Email-in**: a mailbox only the garage reads + IMAP settings (docs/docker.md#email-in-imap), app password as a
+  secret file; then Settings -> Email-in -> allow their sending address. Test with
+  `docker exec -i garage-kit garage email-in < some.eml`.
+- **Home Assistant**: `HA_URL` (LAN is fine), `HA_TOKEN_FILE`, `HA_NOTIFY_TARGETS`.
+- **Automatic research**: `RESEARCH_WORKER=on`, then part 8d on an always-on computer with Claude Code, taking the
+  token from `docker exec garage-kit garage research-token` (docs/docker.md#research-worker).
+- **Backups**: their usual backup of the `garage-data` folder (stop first), or a nightly
+  `docker exec garage-kit garage backup`.
+- Loading research later: the research-car skill works the same; prefix the loader with
+  `GARAGE_DOCKER=garage-kit` (or use the MCP tools).
 
 ## 9. Hand off
 

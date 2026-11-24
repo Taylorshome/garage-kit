@@ -7,6 +7,7 @@ import { chatRoutes } from './mechanic.js';
 import { aiFirstChecks, createSymptom, createTodo, expireStaleAi, setMileage, updateTodo } from './ops.js';
 import { jobsForCar, listQueued, queueJob, recentReports } from './research-jobs.js';
 import { authMode } from './auth.js';
+import { AI_OFF_MESSAGE, aiOff } from './ai.js';
 import { integrations, notify } from './notify.js';
 import { recentNotifications, subscribe, unsubscribe } from './push.js';
 import { DISCLAIMER, ackStatus, acknowledge } from './disclaimer.js';
@@ -169,6 +170,7 @@ export function publicConfig(env, url) {
     integrations: ints, mail_address: ints.includes('email') ? env.MAIL_ADDRESS || null : null,
     vapid_public_key: ints.includes('push') ? env.VAPID_PUBLIC_KEY || null : null,
     disclaimer: DISCLAIMER, research_worker: ints.includes('research_worker'), glb_max_mb: glbMax(env) / 1048576, body_types: BODY_TYPES,
+    ai: !aiOff(env), version: env.APP_VERSION || null, runtime: env.GARAGE_RUNTIME === 'docker' ? 'docker' : 'cloudflare',
   };
 }
 on('GET', '/api/me', async ({ env, url, member }) => ({ member, config: publicConfig(env, url), disclaimer: await ackStatus(env, member) }));
@@ -499,6 +501,7 @@ on('POST', '/api/todos/([\\w-]+)/ask', async ({ env, ctx, m, body }) => {
   // body.continue: finish a cut-off note ("tap to continue") instead of asking again from scratch
   const t = await env.DB.prepare('SELECT ai_status FROM todos WHERE id = ?1').bind(m[1]).first();
   if (!t) throw new HttpError(404, 'To-do not found');
+  if (aiOff(env)) throw new HttpError(424, AI_OFF_MESSAGE);
   const cont = !!body?.continue && t.ai_status === 'truncated';
   await env.DB.prepare("UPDATE todos SET ai_status = 'pending', ai_updated_at = ?1 WHERE id = ?2").bind(nowSec(), m[1]).run();
   // aiFirstChecks reads the partial before it is overwritten; the status column is all that changed

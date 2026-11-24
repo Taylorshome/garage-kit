@@ -1,0 +1,27 @@
+# Garage + a Cloudflare Tunnel sidecar: public HTTPS (needed for Claude connectors and iPhone notifications)
+# without opening a port on your router. docs/docker.md#https
+#   1. Cloudflare dashboard -> Zero Trust -> Networks -> Tunnels -> Create a tunnel (cloudflared) -> copy the token
+#      into .env as TUNNEL_TOKEN=...
+#   2. In the tunnel: Public hostname garage.example.com -> Service http://garage:8787
+#   3. In .env: PUBLIC_URL=https://garage.example.com and TRUST_PROXY=1
+#   4. docker compose -f docker/compose.cloudflared.yaml --env-file .env up -d   (from the repo folder)
+services:
+  garage:
+    image: ghcr.io/taylorshome/garage-kit:0.1
+    container_name: garage-kit
+    restart: unless-stopped
+    volumes:
+      - ../garage-data:/data
+    env_file: ../.env
+    environment:
+      TZ: ${TZ:-UTC}
+    stop_grace_period: 30s
+    # no ports: only the tunnel reaches it. Add "8787:8787" to also use it on your LAN.
+  cloudflared:
+    image: cloudflare/cloudflared:2026.11.2
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?set TUNNEL_TOKEN in .env}
+    depends_on:
+      - garage

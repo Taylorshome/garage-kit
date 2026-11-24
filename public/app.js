@@ -96,7 +96,7 @@ async function openSymptomForm(carId) {
     <div class="field"><label>Where does it seem to come from? <span class="muted">(optional)</span></label>${chipGroup('where', WHERES)}</div>
     <div class="row"><div class="field"><label for="f-miles">Mileage now <span class="muted">(optional)</span></label><input id="f-miles" name="mileage" type="number" inputmode="numeric" min="0" value="${sel.mileage ?? ''}"></div>
       <div class="field"><label for="f-media">Photo or short video <span class="muted">(optional)</span></label><input id="f-media" type="file" accept="image/*,video/*" multiple></div></div>
-    <p class="small muted">After you save, the AI mechanic adds the first things to check, cheapest first.</p>`, {
+    ${CONFIG.ai === false ? '' : '<p class="small muted">After you save, the AI mechanic adds the first things to check, cheapest first.</p>'}`, {
     submit: 'Save symptom',
     onOpen: f => {
       f.querySelectorAll('.chip-toggle').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'));
@@ -108,7 +108,7 @@ async function openSymptomForm(carId) {
       const picked = g => [...f.querySelectorAll(`.chip-toggle[data-group="${g}"][aria-pressed="true"]`)].map(b => b.dataset.val);
       const r = await api(`/api/cars/${data.car_id}/symptoms`, { method: 'POST', body: { description: data.description, kind: picked('kind'), when: picked('when'), where: picked('where'), mileage: data.mileage } });
       if (!r.duplicate) for (const file of f.querySelector('#f-media').files) await api(`/api/todos/${r.id}/files`, { method: 'POST', raw: file });
-      toast(r.duplicate ? 'That one is already on the list' : 'Saved. The mechanic is looking at it…', true);
+      toast(r.duplicate ? 'That one is already on the list' : CONFIG.ai === false ? 'Saved' : 'Saved. The mechanic is looking at it…', true);
       if (location.hash === `#/car/${data.car_id}/todo`) render(); else location.hash = `#/car/${data.car_id}/todo`;
     },
   });
@@ -563,7 +563,7 @@ document.addEventListener('keydown', e => { if ((location.hash === '#/' || locat
 // ---------------------------------------------------------------- car page
 const TABS = [['overview', 'Overview'], ['maintenance', 'Maintenance'], ['history', 'History'], ['todo', 'To-do'], ['parts', 'Parts'], ['alternates', 'Alternates'], ['shopping', 'Shopping list'], ['guides', 'Guides'], ['research', 'Research'], ['mechanic', 'Ask the mechanic'], ['scans', 'Scans']];
 async function viewCar(seq, id, tab = 'overview') {
-  if (!TABS.some(t => t[0] === tab)) tab = 'overview';
+  if (!TABS.some(t => t[0] === tab) || (tab === 'mechanic' && CONFIG.ai === false)) tab = 'overview';
   const data = await api(`/api/cars/${id}`);
   if (stale(seq)) return;
   TODAY = data.today;
@@ -578,7 +578,7 @@ async function viewCar(seq, id, tab = 'overview') {
     </div>
     ${catchupBanner(c.id, data.summary.catchup_pending)}
     <div id="rc-car"></div>
-    <nav class="tabs" aria-label="Car sections">${TABS.map(([k, l]) => `<a href="#/car/${c.id}/${k}" class="${k === tab ? 'on' : ''}">${l}${k === 'todo' && data.summary.open_issues ? ` <span class="badge">${data.summary.open_issues}</span>` : ''}${k === 'maintenance' && data.summary.overdue_count ? ` <span class="badge">${data.summary.overdue_count}</span>` : ''}</a>`).join('')}</nav>
+    <nav class="tabs" aria-label="Car sections">${TABS.filter(([k]) => k !== 'mechanic' || CONFIG.ai !== false).map(([k, l]) => `<a href="#/car/${c.id}/${k}" class="${k === tab ? 'on' : ''}">${l}${k === 'todo' && data.summary.open_issues ? ` <span class="badge">${data.summary.open_issues}</span>` : ''}${k === 'maintenance' && data.summary.overdue_count ? ` <span class="badge">${data.summary.overdue_count}</span>` : ''}</a>`).join('')}</nav>
     <div id="tab"></div>`;
   document.getElementById('edit-car').onclick = () => editCar(c);
   fillPending(document.getElementById('rc-car'), c.id);
@@ -1559,6 +1559,8 @@ async function viewSettings(seq) {
       <li>3D cars: procedural body styles built for this app; or your own uploaded .glb.</li>
       <li>Rendered with <a href="https://threejs.org" rel="noopener" target="_blank">three.js</a> (MIT, incl. its GLTFLoader and BufferGeometryUtils) and the meshoptimizer decoder (MIT).</li>
       <li>Email parsing: postal-mime (MIT-0). MCP sign-in: @cloudflare/workers-oauth-provider (MIT). Vehicle decoding and recalls: NHTSA vPIC (public API).</li></ul></section>
+    <section class="card"><h2>About</h2><p class="small">Garage kit${CONFIG.version ? ` <strong>v${h(CONFIG.version)}</strong>` : ''}, running on ${CONFIG.runtime === 'docker' ? 'Docker' : 'Cloudflare Workers'}. AI: ${CONFIG.ai === false ? 'turned off' : 'on'}.
+      <a href="https://github.com/Taylorshome/garage-kit/blob/main/CHANGELOG.md" rel="noopener" target="_blank">What's new</a></p></section>
     <section class="card"><h2>Account</h2><p>${CONFIG.auth_mode === 'none' ? 'No sign-in is set up.' : `Signed in as <strong>${h(ME?.name)}</strong>${ME?.email ? ` (${h(ME.email)})` : ''}.`}</p>
       ${CONFIG.auth_mode === 'none' ? '' : '<form method="post" action="/auth/logout"><button class="btn">Sign out</button></form>'}</section>
   </div>`;
@@ -1800,6 +1802,9 @@ function applyBranding() {
   if (brand && name.toUpperCase() !== 'GARAGE') brand.textContent = name.toUpperCase();
   document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', name);
   if (!hasInt('email')) document.querySelector('a[href="#/inbox"]')?.remove();
+  document.body.classList.toggle('ai-off', CONFIG.ai === false);
+  const foot = document.querySelector('footer.site-disclaimer');
+  if (foot && CONFIG.version && !foot.querySelector('.app-version')) foot.insertAdjacentHTML('beforeend', ` <span class="app-version">· v${h(CONFIG.version)}</span>`);
   if (CONFIG.auth_mode === 'none' && !document.getElementById('noauth-warning')) {
     const f = document.createElement('footer');
     f.id = 'noauth-warning'; f.className = 'noauth-warning'; f.setAttribute('role', 'alert');

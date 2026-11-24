@@ -94,6 +94,21 @@ export function reconcile(ai, text) {
 }
 function str(v, max) { if (v === undefined || v === null) return null; const s = String(v).trim(); return s ? s.slice(0, max) : null; }
 
+/** RFC 5322 header block -> Headers (folded lines joined; repeated headers appended, so get() joins them like Cloudflare). */
+/** (IMAP email-in, Docker) */
+export function parseHeaders(bytes) {
+  const text = new TextDecoder('latin1').decode(bytes.subarray(0, Math.min(bytes.length, 256 * 1024)));
+  const end = text.search(/\r?\n\r?\n/);
+  const head = (end >= 0 ? text.slice(0, end) : text).replace(/\r?\n[ \t]+/g, ' ');
+  const h = new Headers();
+  for (const line of head.split(/\r?\n/)) {
+    const i = line.indexOf(':');
+    if (i <= 0) continue;
+    try { h.append(line.slice(0, i).trim(), line.slice(i + 1).trim()); } catch { /* invalid header name: skip */ }
+  }
+  return h;
+}
+
 // ---------- AI ----------
 const EXTRACT_PROMPT = `You extract data from automotive scan-tool reports (Topdon TopScan and similar OBD2 apps).
 Return ONLY a JSON object, no prose, with exactly these keys:
