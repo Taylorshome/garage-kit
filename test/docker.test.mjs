@@ -72,22 +72,25 @@ test('outbound: private, special and local addresses are refused', () => {
   assert.doesNotThrow(() => checkUrl('https://vpic.nhtsa.dot.gov/api', allow));
 });
 
-test('outbound: a name that resolves to a private address is blocked at connect time; allowlisted works', async () => {
+test('outbound: a name that resolves to a private address is blocked at connect time; allowlisted works', { timeout: 20_000 }, async () => {
   const srv = createServer((req, res) => res.end('hi')).listen(0, '127.0.0.1');
   await new Promise(r => srv.once('listening', r));
   const port = srv.address().port;
-  const warn = []; const log = { warn: m => warn.push(m) };
-  const blocked = outboundHandler({ allowHosts: new Set(), ResponseCtor: Response, log });
-  let r = await blocked(new Request(`http://localhost:${port}/`));
-  assert.equal(r.status, 403); assert.match(await r.text(), /local name/);
-  // names are checked again at connect time (DNS rebinding): a public-looking name answering 127.0.0.1 is refused
-  const err = await new Promise(res => guardedLookup(new Set())('localhost', {}, e => res(e)));
-  assert.match(String(err?.message), /private address/);
-  assert.equal(await new Promise(res => guardedLookup(new Set(['localhost']))('localhost', {}, (e, a) => res(e || a))), '127.0.0.1');
-  const allowed = outboundHandler({ allowHosts: new Set(['localhost']), ResponseCtor: Response, log });
-  r = await allowed(new Request(`http://localhost:${port}/`));
-  assert.equal(r.status, 200); assert.equal(await r.text(), 'hi');
-  srv.close();
+  try {
+    const warn = []; const log = { warn: m => warn.push(m) };
+    const blocked = outboundHandler({ allowHosts: new Set(), ResponseCtor: Response, log });
+    let r = await blocked(new Request(`http://localhost:${port}/`));
+    assert.equal(r.status, 403); assert.match(await r.text(), /local name/);
+    r = await blocked(new Request(`http://127.0.0.1:${port}/`));
+    assert.equal(r.status, 403);
+    // names are checked again at connect time (DNS rebinding): a name answering 127.0.0.1 / ::1 is refused
+    const err = await new Promise(res => guardedLookup(new Set())('localhost', {}, e => res(e)));
+    assert.match(String(err?.message), /private address/);
+    assert.match(String(await new Promise(res => guardedLookup(new Set(['localhost']))('localhost', {}, (e, a) => res(e || a)))), /^(127\.0\.0\.1|::1)$/);
+    const allowed = outboundHandler({ allowHosts: new Set(['127.0.0.1']), ResponseCtor: Response, log });
+    r = await allowed(new Request(`http://127.0.0.1:${port}/`, { headers: { Connection: 'close' } }));
+    assert.equal(r.status, 200); assert.equal(await r.text(), 'hi');
+  } finally { srv.closeAllConnections(); srv.close(); }
 });
 
 test('config: _FILE secrets, generated secrets persist, provider defaults, password hash', async () => {

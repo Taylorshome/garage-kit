@@ -18,8 +18,8 @@
     "dev": "wrangler dev",
     "demo": "node scripts/configure.mjs --local --mock-ai && wrangler d1 migrations apply DB --local && node scripts/secrets.mjs --local && node scripts/seed-demo.mjs && wrangler dev",
     "backup": "node scripts/backup.mjs",
-    "test": "node --test test/*.test.mjs && python3 -m unittest research-worker/test_worker.py",
-    "test:js": "node --test test/*.test.mjs",
+    "test": "node --test --test-timeout=120000 test/*.test.mjs && python3 -m unittest research-worker/test_worker.py",
+    "test:js": "node --test --test-timeout=120000 test/*.test.mjs",
     "test:e2e": "node scripts/e2e-local.mjs",
     "docker:bundle": "wrangler deploy --dry-run --outdir dist/worker --config wrangler.docker.jsonc",
     "docker:start": "node docker/server.mjs"
