@@ -1,0 +1,30 @@
+{
+  "name": "garage-kit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "A household car-maintenance app you deploy to your own Cloudflare account, set up and researched with your own Claude.",
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "configure": "node scripts/configure.mjs",
+    "secrets": "node scripts/secrets.mjs",
+    "set-password": "node scripts/secrets.mjs --password",
+    "db:migrate": "wrangler d1 migrations apply DB --remote",
+    "db:local": "wrangler d1 migrations apply DB --local",
+    "deploy": "node scripts/configure.mjs && wrangler d1 migrations apply DB --remote && wrangler deploy",
+    "dev": "wrangler dev",
+    "demo": "node scripts/configure.mjs --local --mock-ai && wrangler d1 migrations apply DB --local && node scripts/secrets.mjs --local && node scripts/seed-demo.mjs && wrangler dev",
+    "backup": "node scripts/backup.mjs",
+    "test": "node --test test/*.test.mjs && python3 -m unittest research-worker/test_worker.py",
+    "test:js": "node --test test/*.test.mjs",
+    "test:e2e": "node scripts/e2e-local.mjs"
+  },
+  "dependencies": {
+    "@cloudflare/workers-oauth-provider": "1.2.4",
+    "postal-mime": "^2.7.6"
+  },
+  "devDependencies": {
+    "wrangler": "^4.69.0"
+  }
+}

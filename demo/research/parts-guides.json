@@ -1,0 +1,13 @@
+{
+  "vehicle": "2015 Demo Sedan LX (demo)",
+  "research_date": "2026-01-01",
+  "parts": [
+    { "category": "Filters", "name": "Oil filter", "spec": "Spin-on (demo)", "part_numbers": ["DEMO-OF-1", "DEMO-OF-2"], "price_usd": "$6-12", "price_as_of": "demo", "links": [], "notes": "Demo part numbers; not real.", "source_urls": ["https://example.com/demo/parts"] },
+    { "category": "Brakes", "name": "Front brake pads", "spec": "Ceramic (demo)", "part_numbers": ["DEMO-BP-1"], "price_usd": "$40-80", "price_as_of": "demo", "links": [], "notes": "Demo data.", "source_urls": ["https://example.com/demo/parts"] },
+    { "category": "Wipers", "name": "Wiper blades", "spec": "26 in + 17 in (demo)", "part_numbers": [], "price_usd": "$25 pair", "price_as_of": "demo", "links": [], "notes": "Demo data.", "source_urls": [] }
+  ],
+  "guides": [
+    { "title": "Clean and lube front caliper slides (demo)", "related_issue": "brake squeal", "difficulty": 2, "time": "1 hour", "tools": ["Jack and jack stands", "13/14 mm sockets", "Brake grease"], "steps": ["Loosen lugs, raise the car, set it on jack stands.", "Remove the caliper bolts and slide pins.", "Clean, grease, reassemble; pump the pedal before driving."], "safety": ["Never work under a car held only by a jack."], "videos": [{ "title": "Demo video", "url": "https://example.com/demo/video" }], "articles": [] }
+  ],
+  "additives": []
+}

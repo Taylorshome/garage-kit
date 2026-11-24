@@ -1,0 +1,6 @@
+[
+  { "fluid": "Engine oil (with filter)", "buy": "SAE 0W-20 (demo value)", "example": "Any API SP 0W-20", "amount": "4.4 quarts", "liters": "4.2 L", "notes": "Demo data.", "source": "https://example.com/demo/owners-manual" },
+  { "fluid": "Coolant", "buy": "Long-life coolant, 50/50 (demo)", "example": "Demo brand", "amount": "about 7 quarts", "liters": "6.6 L", "notes": "Demo data.", "source": "https://example.com/demo/owners-manual", "verify": true },
+  { "fluid": "Transmission", "buy": "ATF (demo spec)", "example": "Demo ATF", "amount": "about 4 quarts", "amount_label": "drain-and-fill", "liters": "3.8 L", "notes": "Demo data.", "source": "https://example.com/demo/owners-manual", "verify": true },
+  { "fluid": "Brake fluid", "buy": "DOT 3 (demo)", "example": "Any DOT 3", "amount": "about 1 quart for a flush", "liters": "1 L", "notes": "Demo data.", "source": "https://example.com/demo/owners-manual" }
+]

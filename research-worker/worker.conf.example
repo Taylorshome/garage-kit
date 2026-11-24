@@ -1,0 +1,6 @@
+# Copy to research-worker/worker.conf (git-ignored). The setup-garage skill writes this for you.
+GARAGE_BASE=https://garage.your-subdomain.workers.dev
+# GARAGE_TOKEN_FILE=research-worker/token     (default; mode 600, git-ignored)
+# GARAGE_CLAUDE=/Users/you/.local/bin/claude  (default: found on PATH)
+# GARAGE_DAILY_MAX=6
+# GARAGE_TIMEOUT_MIN=12

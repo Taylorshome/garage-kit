@@ -1,0 +1,10 @@
+{
+  "_about": "DEMO DATA. A made-up 2015 sedan for local testing and screenshots (scripts/seed-demo.mjs). Not a real vehicle; no VIN.",
+  "car": { "nickname": "Demo Sedan", "year": 2015, "make": "Demo", "model": "Sedan", "trim": "LX", "engine": "2.4L I4 (demo)", "transmission": "6-speed automatic (demo)",
+           "body_type": "sedan", "color": "#b3262e", "mileage": 98400, "notes": "Demo car: everything about it is made up." },
+  "starter_schedule": true,
+  "todos": [
+    { "title": "Squeal from the front when braking in the morning", "notes": "Goes away after a few stops. Started about two weeks ago.", "priority": "medium", "symptom": true },
+    { "title": "Replace the wiper blades", "priority": "low" }
+  ]
+}

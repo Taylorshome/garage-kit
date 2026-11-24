@@ -1,0 +1,47 @@
+{
+  "_about": "DEMO DATA: a made-up guided-diagnosis plan for the demo car (screenshots and tests). The example.com links are placeholders.",
+  "plans": [
+    {
+      "id": "demo-sedan-brake-squeal",
+      "version": 1,
+      "symptom": "Squeal when braking in the morning",
+      "title": "Demo Sedan: brake squeal (demo plan)",
+      "aliases": ["brake squeal", "squeal when braking", "brakes squeak", "squeaky brakes", "brake noise"],
+      "todo_match": ["squeal", "brak"],
+      "intro": "Three checks, cheapest first (demo plan). Most morning squeal is surface rust; worn pads and dry slide pins come next.",
+      "safety_overview": "Never get under or reach behind a wheel of a car held only by a jack: use jack stands on firm ground. Brakes are safety-critical: if the pedal feels soft or the car pulls, stop driving it.",
+      "causes": [
+        { "id": "rust", "name": "Surface rust on the rotors (normal)", "likelihood": "high", "fix": "Nothing: it wipes off in a few stops", "cost": "$0", "parts": [], "keywords": ["rust", "morning", "moisture"] },
+        { "id": "pads_worn", "name": "Pads down to the wear indicator", "likelihood": "medium", "fix": "Replace the front pads", "cost": "$40-80 DIY", "parts": ["Front brake pads"], "keywords": ["pads", "wear indicator"] },
+        { "id": "slides", "name": "Dry caliper slide pins or worn shims", "likelihood": "medium", "fix": "Clean and grease the slides; new shims", "cost": "$20-40", "parts": [], "keywords": ["slide", "shim", "caliper"] }
+      ],
+      "steps": [
+        { "id": "when", "title": "When does it squeal?", "minutes": 5, "tools": [], "safety": ["Do this on a quiet street, not in traffic."],
+          "do": "Drive a few blocks first thing in the morning and count the stops until the squeal goes away.",
+          "look_for": "Whether the squeal stops after a few stops or keeps going all day.",
+          "tests": ["rust"], "sources": ["https://example.com/demo/forum-thread"],
+          "options": [
+            { "key": "goes_away", "label": "Gone after a few stops", "means": "Classic surface rust: normal, especially after rain (demo).", "effects": { "rust": "up" } },
+            { "key": "all_day", "label": "Squeals all day", "means": "Not just rust: look at the pads and slides next.", "effects": { "rust": "rule_out", "pads_worn": "up", "slides": "up" } }
+          ] },
+        { "id": "pad_look", "title": "Look at the pad thickness", "minutes": 10, "tools": ["flashlight"], "safety": ["Engine off, parking brake on."],
+          "do": "Turn the steering wheel all the way and look through the wheel spokes at the outer front pad.",
+          "look_for": "How thick the pad material is (a new pad is about 10 mm; under 3 mm is worn out).",
+          "tests": ["pads_worn"], "sources": ["https://example.com/demo/parts"],
+          "options": [
+            { "key": "thick", "label": "Plenty left (over 5 mm)", "means": "Pads are fine for now (demo).", "effects": { "pads_worn": "rule_out" } },
+            { "key": "thin", "label": "Thin (3 mm or less) or metal tab touching", "means": "The wear indicator is squealing: time for pads (demo).", "effects": { "pads_worn": "confirm" }, "found": "pads_worn", "confidence": "medium" }
+          ] },
+        { "id": "slides", "title": "Check the caliper slide pins", "minutes": 45, "tools": ["jack", "jack stands", "socket set", "brake grease"],
+          "safety": ["Car on jack stands, never only on the jack.", "Don't press the brake pedal with a caliper off."],
+          "do": "Remove the wheel and the two caliper slide bolts, pull the pins and look at them.",
+          "look_for": "Pins that are dry, rusty or hard to slide.",
+          "tests": ["slides"], "sources": ["https://example.com/demo/video"],
+          "options": [
+            { "key": "dry", "label": "Dry, rusty or sticky", "means": "Sticky slides make pads drag and squeal (demo).", "effects": { "slides": "confirm" }, "found": "slides", "confidence": "medium" },
+            { "key": "fine", "label": "Clean and greased", "means": "Slides are fine.", "effects": { "slides": "rule_out" } }
+          ] }
+      ]
+    }
+  ]
+}

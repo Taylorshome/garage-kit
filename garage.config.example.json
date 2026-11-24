@@ -1,0 +1,30 @@
+{
+  "_about": "Copy to garage.config.json (git-ignored) or let the setup-garage skill write it. Then run: npm run configure (writes wrangler.jsonc). Secrets never go here.",
+  "app_name": "Garage",
+  "worker_name": "garage",
+  "timezone": "America/Chicago",
+  "auth": {
+    "mode": "password",
+    "access": { "team_domain": "", "aud": "" },
+    "oidc": { "issuer": "", "client_id": "", "token_auth": "basic" }
+  },
+  "domain": { "custom_domain": "", "workers_dev": true },
+  "integrations": {
+    "push": { "enabled": false, "subject": "" },
+    "email": { "enabled": false, "address": "", "notify_to": [] },
+    "home_assistant": { "enabled": false, "url": "", "notify_targets": [] },
+    "research_worker": { "enabled": false }
+  },
+  "ai": {
+    "chat_model": "@cf/zai-org/glm-5.3",
+    "chat_fallback": "@cf/openai/gpt-oss-120b",
+    "vision_model": "@cf/thinkingmachines/inkling-2-small",
+    "vision_fallback": "@cf/deepseek-ai/deepseek-v4.1-flash-1017"
+  },
+  "my_tools": "basic hand tools, jack and jack stands, a multimeter, an OBD-II code reader",
+  "notify_hour": 8,
+  "mileage_check": true,
+  "glb_max_mb": 15,
+  "account_id": "",
+  "resources": { "d1_name": "garage", "d1_id": "", "files_kv_id": "", "oauth_kv_id": "" }
+}

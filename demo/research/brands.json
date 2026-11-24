@@ -1,0 +1,11 @@
+{
+  "vehicle": "2015 Demo Sedan LX (demo)",
+  "as_of": "demo",
+  "notes": ["Demo data: made-up brands and prices for screenshots."],
+  "parts": [
+    { "part": "Oil filter", "category": "Filters", "pick": "Demo Brand A", "options": [
+        { "brand": "Demo Brand A", "tier": "OEM-equivalent", "part_number": "DEMO-OF-1", "price_usd": "$9", "where": "RockAuto (demo)", "warranty": "n/a", "reputation": "Demo", "verdict": "buy", "sources": ["https://example.com/demo/parts"] },
+        { "brand": "Demo Brand B", "tier": "economy", "part_number": "DEMO-OF-2", "price_usd": "$6", "where": "local store (demo)", "warranty": "n/a", "reputation": "Demo", "verdict": "ok", "sources": [] } ],
+      "avoid": [{ "brand": "Demo Brand Z", "why": "Made-up example of an avoid entry." }] }
+  ]
+}

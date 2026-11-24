@@ -1,0 +1,38 @@
+{
+  "_about": "DEMO DATA for screenshots and tests. Every entry below is made up; the example.com links are placeholders, not sources.",
+  "vehicle": { "year": 2015, "make": "Demo", "model": "Sedan", "trim": "LX", "engine": "2.4L I4 (demo)", "transmission": "6-speed automatic (demo)", "oil": "0W-20, 4.4 qt with filter (demo value)", "sources": ["https://example.com/demo/owners-manual"] },
+  "recalls": [
+    { "campaign": "DEMO-15V-000", "date": "2015-06-01", "component": "Electrical (demo)", "summary": "Demo recall: a made-up wiring harness inspection.", "remedy": "Dealer inspects and replaces the harness clip for free (demo).", "url": "https://example.com/demo/recall" }
+  ],
+  "tsbs": [
+    { "number": "DEMO-TSB-01", "title": "Brake squeal on cold mornings (demo)", "summary": "Demo bulletin: revised front pad shims reduce morning squeal.", "url": "https://example.com/demo/tsb" }
+  ],
+  "schedule": [
+    { "item": "Oil & filter change", "interval_miles": 7500, "interval_months": 12, "severe": false, "source": "manual", "notes": "0W-20, 4.4 qt with filter (demo value). Source: https://example.com/demo/owners-manual" },
+    { "item": "Oil & filter change (severe service)", "interval_miles": 3750, "interval_months": 6, "severe": true, "source": "manual", "notes": "Short trips, extreme heat or cold, towing (demo)." },
+    { "item": "Tire rotation", "interval_miles": 7500, "interval_months": 12, "severe": false, "source": "manual", "notes": "Every oil change (demo)." },
+    { "item": "Engine air filter", "interval_miles": 30000, "interval_months": 36, "severe": false, "source": "manual", "notes": "" },
+    { "item": "Cabin air filter", "interval_miles": 15000, "interval_months": 12, "severe": false, "source": "typical", "notes": "" },
+    { "item": "Brake fluid flush", "interval_miles": null, "interval_months": 36, "severe": false, "source": "manual", "notes": "DOT 3 (demo value)." },
+    { "item": "Spark plugs", "interval_miles": 105000, "interval_months": null, "severe": false, "source": "manual", "notes": "" },
+    { "item": "Coolant replacement", "interval_miles": 120000, "interval_months": 120, "severe": false, "source": "manual", "notes": "First at 120k / 10 yr, then every 60k / 5 yr (demo)." },
+    { "item": "Transmission fluid", "interval_miles": 60000, "interval_months": 60, "severe": false, "source": "typical", "notes": "Not in the demo manual; common practice." }
+  ],
+  "known_issues": [
+    { "title": "Front brake squeal when cold (demo)", "mileage_range": "40k-120k", "symptoms": "Squeal for the first few stops on cold mornings.", "fix": "Revised shims per DEMO-TSB-01; clean and lube the caliper slides.", "cost_diy": "$30-60", "cost_shop": "$150-250", "urgency": "low", "sources": ["https://example.com/demo/forum-thread"] },
+    { "title": "Rough idle from a dirty throttle body (demo)", "mileage_range": "80k+", "symptoms": "Idle hunts slightly when warm.", "fix": "Clean the throttle body and relearn idle.", "cost_diy": "$10", "cost_shop": "$100-150", "urgency": "low", "sources": ["https://example.com/demo/video"] }
+  ],
+  "symptom_diagnosis": [
+    { "symptom": "Squeal when braking in the morning", "likely_causes": [
+        { "cause": "Surface rust / moisture on the rotors", "likelihood": "high", "how_to_check": "Does it stop after 3-5 stops? Then it's normal.", "fix": "Nothing needed.", "cost": "$0" },
+        { "cause": "Worn pad shims or dry caliper slides", "likelihood": "medium", "how_to_check": "Pull a wheel; look at the shims and slide pins.", "fix": "Clean and grease slides; replace shims.", "cost": "$20-40" },
+        { "cause": "Pads at the wear indicator", "likelihood": "medium", "how_to_check": "Measure pad thickness (under 3 mm = replace).", "fix": "Replace front pads.", "cost": "$40-80 DIY" } ],
+      "scan_tool_checks": ["None needed for brake noise."] }
+  ],
+  "recommendations": [
+    { "priority": "now", "item": "Check the front brake pad thickness", "why": "The squeal could be the wear indicator (demo).", "cost": "$0" },
+    { "priority": "soon", "item": "Cabin air filter", "why": "Never recorded (demo).", "cost": "$15" },
+    { "priority": "watch", "item": "Idle quality", "why": "Known throttle-body issue past 80k (demo).", "cost": "$10" }
+  ],
+  "questions": ["Has the cabin air filter ever been replaced? (demo)"]
+}

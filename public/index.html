@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
+<meta name="robots" content="noindex">
+<title>Garage</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Garage">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="/styles.css">
+<link rel="modulepreload" href="/vendor/three-0.160.0/three.module.min.js">
+<script type="module" src="/app.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#/">GAR<span>AGE</span></a>
+  <nav class="nav" aria-label="Main">
+    <a href="#/">Garage</a>
+    <a href="#/due">Due list</a>
+    <a href="#/inbox">Inbox<span class="badge hidden" id="inbox-badge"></span></a>
+    <a href="#/settings">Settings <span class="muted small" id="who"></span></a>
+  </nav>
+</header>
+<main id="app"><p class="muted">Opening the garage…</p></main>
+<footer class="site-disclaimer small muted">Not professional advice. This information comes from AI and online research, not a certified mechanic. Verify before acting, follow safety precautions, and do all work at your own risk.</footer>
+<button type="button" class="fab" id="quick-log" aria-label="Log a service"><span aria-hidden="true">＋</span> Log</button>
+</body>
+</html>

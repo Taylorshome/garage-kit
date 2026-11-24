@@ -1,0 +1,66 @@
+<!doctype html>
+<!--
+  Dev preview of the procedural body styles (public/car3d.js). Not served by the Worker.
+  From the kit root:    python3 -m http.server 8765
+  Then open:            http://localhost:8765/tools/model-grid.html
+  Params:
+    styles=sedan,coupe,...   which body styles (default: all six)
+    view=side|front34|rear34|front|rear|top34   camera preset (default front34), or az=<rad>&el=<rad>
+    colors=#8a1c1c,#1f3f7a   paint colours, cycled over the cells
+    testglb=1                adds a cell with a self-made test GLB (box car in centimetres, built along z, material "CarPaint")
+                             to check uploaded-model normalisation and paint recolouring
+    w=420&h=260              cell size in px
+  window.ready becomes true once every cell has rendered (for headless screenshots).
+-->
+<html lang="en"><meta charset="utf-8"><title>Body styles</title>
+<style>
+  body { margin: 0; background: #0b0d10; color: #cfd6de; font: 13px system-ui, sans-serif; }
+  #grid { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; }
+  .cell { position: relative; background: #10141a; }
+  .cell b { position: absolute; left: 8px; top: 6px; z-index: 1; }
+</style>
+<script type="importmap">{ "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js" } }</script>
+<body><div id="grid"></div>
+<script type="module">
+  window.GARAGE_ASSET_BASE = '/public';
+  const { CarViewer, SPECS, loadThree } = await import('/public/car3d.js');
+  const q = new URLSearchParams(location.search);
+  const styles = (q.get('styles') || Object.keys(SPECS).join(',')).split(',').filter(s => SPECS[s]);
+  const colors = (q.get('colors') || '#8a1c1c,#1f3f7a,#e8e8e4,#2f5a3a,#0e0f11,#9aa1a9').split(',');
+  const VIEWS = { side: [0, 0.08], front34: [0.75, 0.2], rear34: [-0.75, 0.2], front: [Math.PI / 2, 0.08], rear: [-Math.PI / 2, 0.08], top34: [0.6, 0.6] };
+  const [az, el] = q.has('az') ? [Number(q.get('az')), Number(q.get('el') || 0.2)] : VIEWS[q.get('view') || 'front34'];
+  const W = Number(q.get('w') || 420), H = Number(q.get('h') || 260);
+  const cells = styles.map((s, i) => ({ label: s, row: { id: s, body_type: s, color: colors[i % colors.length] } }));
+  if (q.get('testglb')) cells.push({ label: 'uploaded .glb (test)', row: { id: 'glb', body_type: 'suv', color: '#c4561c', model_url: await testGlb() } });
+  const viewers = [];
+  for (const c of cells) {
+    const box = document.createElement('div'); box.className = 'cell'; box.style.width = W + 'px'; box.style.height = H + 'px';
+    box.innerHTML = `<b>${c.label}</b>`; document.getElementById('grid').append(box);
+    const v = await new CarViewer(box, { garage: false, spin: false, capture: true }).init();
+    v.setView(az, el);
+    v.show(c.row, 0);
+    viewers.push(v);
+  }
+  await Promise.all(viewers.map(v => v.ready));
+  await new Promise(r => setTimeout(r, 600));
+  viewers.forEach(v => v.renderOnce());
+  window.viewers = viewers;
+  window.ready = true;
+
+  // A tiny box "car" made here (never a downloaded model): 450 x 180 x 140 units (centimetres), long axis along z.
+  async function testGlb() {
+    const T = await loadThree();
+    const { GLTFExporter } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/exporters/GLTFExporter.js');
+    const paint = new T.MeshStandardMaterial({ name: 'CarPaint', color: 0x777777, metalness: 0.4, roughness: 0.4 });
+    const tire = new T.MeshStandardMaterial({ name: 'Tires', color: 0x111111, roughness: 0.9 });
+    const glass = new T.MeshStandardMaterial({ name: 'Glass', color: 0x0b1118, roughness: 0.1 });
+    const root = new T.Group();
+    const body = new T.Mesh(new T.BoxGeometry(180, 70, 450), paint); body.position.set(0, 70, 0); root.add(body);
+    const cab = new T.Mesh(new T.BoxGeometry(160, 55, 230), glass); cab.position.set(0, 132, -20); root.add(cab);
+    for (const x of [-80, 80]) for (const z of [-150, 150]) {
+      const w = new T.Mesh(new T.CylinderGeometry(35, 35, 25, 20), tire); w.rotation.z = Math.PI / 2; w.position.set(x, 35, z); root.add(w);
+    }
+    const buf = await new GLTFExporter().parseAsync(root, { binary: true });
+    return URL.createObjectURL(new Blob([buf], { type: 'model/gltf-binary' }));
+  }
+</script>
