@@ -8,6 +8,16 @@ const h = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&
 // href for a link that came from research / AI / the web: http(s) only, escaped (anything else becomes a dead link)
 const hu = u => /^https?:\/\//i.test(String(u ?? '').trim()) ? h(String(u).trim()) : '#';
 const miles = n => (n == null ? '—' : `${Number(n).toLocaleString('en-US')} mi`);
+const hrs = n => (n == null || n === '' ? '—' : `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 1 })} h`);
+// vehicle types (src/vehicle.js): wording, hours, needs-info placeholders
+const VEHICLE_TYPES = { car: 'Car', truck: 'Truck', van: 'Van', suv: 'SUV', motorcycle: 'Motorcycle', utv: 'Side-by-side (UTV)', atv: 'ATV' };
+const TYPE_BODIES = { car: ['sedan', 'coupe', 'hatchback'], truck: ['pickup'], van: ['minivan'], suv: ['suv'], motorcycle: ['cruiser', 'sport', 'dualsport', 'scooter'], utv: ['utv'], atv: ['atv'] };
+const NOUN = { car: 'car', truck: 'truck', van: 'van', suv: 'SUV', motorcycle: 'motorcycle', utv: 'side-by-side', atv: 'ATV' };
+const vnoun = c => NOUN[c?.vehicle_type] || 'car';
+const usesHours = c => !!c?.uses_hours || ['utv', 'atv'].includes(c?.vehicle_type);
+const reading = c => usesHours(c) ? `${hrs(c.hours)}${c.mileage != null ? ` · ${miles(c.mileage)}` : ''}` : miles(c.mileage);
+const everyText = i => [i.interval_miles ? miles(i.interval_miles) : null, i.interval_hours ? hrs(i.interval_hours) : null, i.interval_months ? `${i.interval_months} mo` : null].filter(Boolean).join(' / ');
+const needsInfo = c => (c?.needs_info || []).length ? `<span class="needs-info" title="Still needed: ${h(c.needs_info.map(n => n.label).join(', '))}"><span class="pill unknown">needs info</span> <span class="small muted">${c.needs_info.map(n => h(n.label)).join(' · ')}</span></span>` : '';
 const money = c => (c == null ? '' : `$${(c / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 const ymm = c => [c.year, c.make, c.model, c.trim && !/\(/.test(c.trim) ? c.trim : null].filter(Boolean).join(' ');
 const fmtDate = d => (d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '');
@@ -80,7 +90,7 @@ const area = (label, name, value = '', extra = '') =>
 // ---------------------------------------------------------------- symptoms
 const KINDS = { noise: 'Noise', smell: 'Smell', leak: 'Leak', warning_light: 'Warning light', handling: 'Drives / handles weird', no_start: "Won't start", other: 'Other' };
 const WHENS = { cold_start: 'Cold start', warm: 'Warmed up', idle: 'Idle', accelerating: 'Accelerating', braking: 'Braking', turning: 'Turning', highway: 'Highway', bumps: 'Over bumps', always: 'All the time' };
-const WHERES = { front: 'Front', back: 'Back', left: 'Left', right: 'Right', under_hood: 'Under the hood', inside: 'Inside the car' };
+const WHERES = { front: 'Front', back: 'Back', left: 'Left', right: 'Right', under_hood: 'Under the hood / engine', inside: 'Inside / cab' };
 const symptomBtn = (carId = '', extra = '') => `<button type="button" class="btn symptom-btn ${extra}" data-symptom="${h(carId)}"><span aria-hidden="true">＋</span> Add a new symptom</button>`;
 const chipGroup = (group, dict) => `<div class="chips" role="group" aria-label="${group}">${Object.entries(dict).map(([k, l]) => `<button type="button" class="chip-toggle" data-group="${group}" data-val="${k}" aria-pressed="false">${h(l)}</button>`).join('')}</div>`;
 
@@ -140,9 +150,9 @@ async function openQuickLog() {
   if (here) return qlJob(s, here[1]);
   s.body.innerHTML = '<p class="muted">Loading…</p>';
   const { cars } = await api('/api/cars');
-  s.title('Log: which car?');
+  s.title('Log: which vehicle?');
   const last = store.get('garage.car');
-  s.body.innerHTML = `<div class="pick-list">${scanPick('')}${cars.map(c => `<button type="button" class="pick" data-car="${c.id}"><span class="grow"><strong>${h(c.nickname)}</strong><span class="small muted">${h(ymm(c))} · ${miles(c.mileage)}</span></span>${c.id === last ? '<span class="chip">last viewed</span>' : ''}<span class="pick-go" aria-hidden="true">›</span></button>`).join('')}</div>`;
+  s.body.innerHTML = `<div class="pick-list">${scanPick('')}${cars.map(c => `<button type="button" class="pick" data-car="${c.id}"><span class="grow"><strong>${h(c.nickname)}</strong><span class="small muted">${h(ymm(c))} · ${reading(c)}</span></span>${c.id === last ? '<span class="chip">last viewed</span>' : ''}<span class="pick-go" aria-hidden="true">›</span></button>`).join('')}</div>`;
   s.body.onclick = e => { if (e.target.closest('[data-ql-scan]')) return openScan('', s); const b = e.target.closest('[data-car]'); if (b) safe(qlJob)(s, b.dataset.car); };
 }
 const scanPick = carId => `<button type="button" class="pick scan" data-ql-scan="${h(carId)}"><span class="rc-ico" aria-hidden="true">${RECEIPT_ICON}</span><span class="grow"><strong>Scan a receipt</strong><span class="small muted">Photo or PDF; it fills everything in for you</span></span><span class="pick-go" aria-hidden="true">›</span></button>`;
@@ -162,7 +172,7 @@ function qlForm(s, d, item) {
   s.body.innerHTML = `<form class="ql-form" novalidate>
     ${item ? `<div class="ql-job"><div class="grow"><span class="small muted">Job</span><strong>${h(item.name)}</strong></div><button type="button" class="btn ghost sm" data-back>Change</button></div>`
       : field('What did you do?', 'title', '', 'text', 'required maxlength="160" placeholder="e.g. Replaced wiper blades"')}
-    <div class="row ql-2">${field('Mileage', 'mileage', d.car.mileage ?? '', 'number', 'inputmode="numeric" min="0"')}${field('Date', 'date', todayLocal(), 'date', 'required')}</div>
+    <div class="row ql-2">${usesHours(d.car) ? field('Engine hours', 'hours', d.car.hours ?? '', 'number', 'inputmode="decimal" min="0" step="0.1"') : ''}${field('Mileage', 'mileage', d.car.mileage ?? '', 'number', 'inputmode="numeric" min="0"')}${field('Date', 'date', todayLocal(), 'date', 'required')}</div>
     <div class="row ql-2">${field('Cost $ (optional)', 'cost', '', 'text', 'inputmode="decimal" placeholder="0.00"')}${field('Shop (blank = DIY)', 'shop', '', 'text', 'maxlength="120"')}</div>
     ${area('Note (optional)', 'details', '', 'rows="2" maxlength="8000"')}
     <button class="btn primary ql-save" type="submit">Save</button></form>`;
@@ -176,7 +186,7 @@ function qlForm(s, d, item) {
     if (!title) { toast('Say what you did'); return; }
     const btn = form.querySelector('[type=submit]'); btn.disabled = true;
     try {
-      await api(`/api/cars/${d.car.id}/services`, { method: 'POST', body: { date: f.date, mileage: f.mileage, title, cost: f.cost, shop: f.shop, diy: !f.shop.trim(), details: f.details, item_ids: item ? [item.id] : [] } });
+      await api(`/api/cars/${d.car.id}/services`, { method: 'POST', body: { date: f.date, mileage: f.mileage, hours: f.hours, title, cost: f.cost, shop: f.shop, diy: !f.shop.trim(), details: f.details, item_ids: item ? [item.id] : [] } });
     } finally { btn.disabled = false; }
     s.close();
     toast(`Logged: ${title}`, true);
@@ -304,7 +314,8 @@ async function viewReceipt(seq, id) {
     <form class="card rc-form" id="rc-form" novalidate>
       <div class="field${lcl('car')}"><label for="rc-car">Car</label><select id="rc-car" name="car_id" ${done ? 'disabled' : ''}>${carId ? '' : '<option value="">Pick the car…</option>'}${v.cars.map(c => `<option value="${c.id}" ${c.id === carId ? 'selected' : ''}>${h(c.nickname)} (${h(c.label)})</option>`).join('')}</select></div>
       <div class="row ql-2"><div class="field${lcl('date')}"><label for="rc-date">Date</label><input id="rc-date" name="date" type="date" value="${h(d.date || '')}" max="${todayLocal()}"></div>
-        <div class="field${lcl('mileage')}"><label for="rc-miles">Odometer</label><input id="rc-miles" name="mileage" type="number" inputmode="numeric" min="0" value="${d.mileage ?? ''}" placeholder="${carOf()?.mileage ? `last ${carOf().mileage}` : 'miles'}"></div></div>
+        <div class="field${lcl('mileage')}"><label for="rc-miles">Odometer</label><input id="rc-miles" name="mileage" type="number" inputmode="numeric" min="0" value="${d.mileage ?? ''}" placeholder="${carOf()?.mileage ? `last ${carOf().mileage}` : 'miles'}"></div>
+        ${carOf()?.uses_hours || d.hours != null ? `<div class="field"><label for="rc-hours">Engine hours</label><input id="rc-hours" name="hours" type="number" inputmode="decimal" min="0" step="0.1" value="${d.hours ?? ''}" placeholder="${carOf()?.hours != null ? `last ${carOf().hours}` : 'hours'}"></div>` : ''}</div>
       <div class="field${lcl('shop')}"><label for="rc-shop">Shop / store</label><input type="text" id="rc-shop" name="shop" value="${h(d.shop || '')}" maxlength="120"></div>
       <div class="field"><label for="rc-title">What was done</label><input type="text" id="rc-title" name="title" value="${h(d.title || '')}" maxlength="160"></div>
       <div class="row ql-2"><div class="field${lcl('total')}"><label for="rc-total">Total $</label><input type="text" id="rc-total" name="total" inputmode="decimal" value="${d.total != null ? d.total.toFixed(2) : ''}"></div>
@@ -354,7 +365,7 @@ async function viewReceipt(seq, id) {
     if (!f.car_id) { toast('Pick the car first'); document.getElementById('rc-car').focus(); return; }
     if (!f.date) { toast('Add the date'); document.getElementById('rc-date').focus(); return; }
     const lineItems = [...lines.querySelectorAll('.rc-line')].map(r => Object.fromEntries([...r.querySelectorAll('input,select')].map(x => [x.name, x.value.trim()]))).filter(l => l.description || l.amount);
-    const edits = { car_id: f.car_id, date: f.date, mileage: f.mileage, shop: f.shop, title: f.title, total: f.total, tax: f.tax, kind: f.kind, line_items: lineItems, item_ids: f.item_ids || [] };
+    const edits = { car_id: f.car_id, date: f.date, mileage: f.mileage, ...(f.hours !== undefined ? { hours: f.hours } : {}), shop: f.shop, title: f.title, total: f.total, tax: f.tax, kind: f.kind, line_items: lineItems, item_ids: f.item_ids || [] };
     const btn = document.getElementById('rc-save'); btn.disabled = true; btn.textContent = 'Saving…';
     try {
       const r = await api(`/api/receipts/${id}/confirm`, { method: 'POST', body: { edits, close_todo_ids: f.close_todo || [] } });
@@ -484,7 +495,7 @@ async function viewGarage(seq) {
   document.title = CONFIG.app_name;
   if (!cars.length) {
     dropViewer();
-    app.innerHTML = `<section class="bay"><div class="ceiling"><i></i><i></i></div><div class="empty-bay"><h1>The bay is empty</h1><p class="muted">Add your first car.</p><a class="btn primary" href="#/new-car">Add a car</a></div></section>`;
+    app.innerHTML = `<section class="bay"><div class="ceiling"><i></i><i></i></div><div class="empty-bay"><h1>The bay is empty</h1><p class="muted">Add your first vehicle.</p><a class="btn primary" href="#/new-car">Add a vehicle</a></div></section>`;
     return;
   }
   let idx = Math.max(0, cars.findIndex(c => c.id === store.get('garage.car')));
@@ -494,9 +505,9 @@ async function viewGarage(seq) {
     <div class="select-layout">
       <div>
         <div class="stage">
-          <button class="arrow l" id="prev" aria-label="Previous car">‹</button>
+          <button class="arrow l" id="prev" aria-label="Previous vehicle">‹</button>
           <div class="stall" id="stall"><div class="stall-number" id="bay-num"></div>${HAS_GL ? '' : '<div class="car-holder" id="holder"></div>'}</div>
-          <button class="arrow r" id="next" aria-label="Next car">›</button>
+          <button class="arrow r" id="next" aria-label="Next vehicle">›</button>
         </div>
         <div class="dots" id="dots">${cars.map((c, i) => `<button data-i="${i}" aria-label="${h(c.nickname)}"></button>`).join('')}</div>
         <p class="keys-hint">← → to switch · drag to spin · Enter to select</p>
@@ -518,9 +529,11 @@ async function viewGarage(seq) {
     document.querySelectorAll('#dots button').forEach((b, i) => b.classList.toggle('on', i === idx));
     const s = c.summary;
     document.getElementById('stats').innerHTML = `
-      <div class="tag">${h((BODY_LABELS[c.body_type] || c.body_type).toUpperCase())}</div>
+      <div class="tag">${h((BODY_LABELS[c.body_type] || VEHICLE_TYPES[c.vehicle_type] || c.body_type).toUpperCase())}</div>
       <h2>${h(c.nickname)}</h2>
       <div class="ymm">${h(ymm(c))}${c.engine ? ` · ${h(c.engine.replace(/\s*\(.*\)/, ''))}` : ''}</div>
+      ${c.needs_info?.length ? `<a class="needs-link" href="#/car/${c.id}/overview">${needsInfo(c)}</a>` : ''}
+      ${usesHours(c) ? `<div class="stat"><span class="k">Hours</span><span class="v">${hrs(c.hours)}</span></div>` : ''}
       <div class="stat"><span class="k">Mileage</span><span class="v">${miles(c.mileage)}</span></div>
       <div class="stat"><span class="k">Health</span>${meter(s.health)}</div>
       <div class="stat"><span class="k">Next service</span><span class="v small">${h(nextDueText(s))}</span></div>
@@ -573,12 +586,12 @@ async function viewCar(seq, id, tab = 'overview') {
   app.innerHTML = `
     <div class="car-head">
       <a class="btn ghost sm" href="#/" aria-label="Back to the garage">‹ Garage</a>
-      <div><h1>${h(c.nickname)}</h1><div class="ymm">${h(ymm(c))} · ${miles(c.mileage)}</div></div>
-      <div class="actions">${scanBtn(c.id, 'sm', 'Scan receipt')}<button class="btn sm" id="edit-car">Edit car</button></div>
+      <div><h1>${h(c.nickname)}</h1><div class="ymm">${h(ymm(c))} · ${reading(c)}</div>${needsInfo(c)}</div>
+      <div class="actions">${scanBtn(c.id, 'sm', 'Scan receipt')}<button class="btn sm" id="edit-car">Edit ${h(vnoun(c))}</button></div>
     </div>
     ${catchupBanner(c.id, data.summary.catchup_pending)}
     <div id="rc-car"></div>
-    <nav class="tabs" aria-label="Car sections">${TABS.filter(([k]) => k !== 'mechanic' || CONFIG.ai !== false).map(([k, l]) => `<a href="#/car/${c.id}/${k}" class="${k === tab ? 'on' : ''}">${l}${k === 'todo' && data.summary.open_issues ? ` <span class="badge">${data.summary.open_issues}</span>` : ''}${k === 'maintenance' && data.summary.overdue_count ? ` <span class="badge">${data.summary.overdue_count}</span>` : ''}</a>`).join('')}</nav>
+    <nav class="tabs" aria-label="Vehicle sections">${TABS.filter(([k]) => k !== 'mechanic' || CONFIG.ai !== false).map(([k, l]) => `<a href="#/car/${c.id}/${k}" class="${k === tab ? 'on' : ''}">${l}${k === 'todo' && data.summary.open_issues ? ` <span class="badge">${data.summary.open_issues}</span>` : ''}${k === 'maintenance' && data.summary.overdue_count ? ` <span class="badge">${data.summary.overdue_count}</span>` : ''}</a>`).join('')}</nav>
     <div id="tab"></div>`;
   document.getElementById('edit-car').onclick = () => editCar(c);
   fillPending(document.getElementById('rc-car'), c.id);
@@ -591,8 +604,9 @@ async function viewCar(seq, id, tab = 'overview') {
 const fmtMonth = d => (d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '');
 const catchupBanner = (carId, n) => n ? `<a class="catchup-banner" href="#/catchup/${carId}"><span class="grow"><strong>${n} item${n > 1 ? 's have' : ' has'} no history</strong> · catch up (2 min)</span><span aria-hidden="true">›</span></a>` : '';
 function lastDoneText(i) {
-  if (i.last_done_estimated) return `<span title="Estimate from the catch-up screen">~${fmtMonth(i.last_done_date)}${i.last_done_miles != null ? ` @ ~${miles(i.last_done_miles)}` : ''}</span> <span class="chip est-chip">estimate</span>`;
-  if (i.last_done_date || i.last_done_miles != null) return `${fmtDate(i.last_done_date)}${i.last_done_miles != null ? ` @ ${miles(i.last_done_miles)}` : ''}`;
+  const hr = i.last_done_hours != null ? ` @ ${i.last_done_estimated ? '~' : ''}${hrs(i.last_done_hours)}` : '';
+  if (i.last_done_estimated) return `<span title="Estimate from the catch-up screen">~${fmtMonth(i.last_done_date)}${i.last_done_miles != null ? ` @ ~${miles(i.last_done_miles)}` : ''}${hr}</span> <span class="chip est-chip">estimate</span>`;
+  if (i.last_done_date || i.last_done_miles != null || i.last_done_hours != null) return `${fmtDate(i.last_done_date)}${i.last_done_miles != null ? ` @ ${miles(i.last_done_miles)}` : ''}${hr}`;
   if (i.catchup_answer === 'unknown') return '<em>unknown (don\'t remember)</em>';
   if (i.catchup_answer === 'never') return '<em>never done</em>';
   return '<em>unknown, set last done</em>';
@@ -605,7 +619,8 @@ async function viewCatchup(seq, id) {
   document.title = `Catch up · ${c.nickname} · ${CONFIG.app_name}`;
   const picked = {};
   for (const i of d.items) if (i.answer) picked[i.id] = i.answer;
-  const every = i => [i.interval_miles ? miles(i.interval_miles) : null, i.interval_months ? `${i.interval_months} mo` : null].filter(Boolean).join(' / ');
+  const every = everyText;
+  const H = c.uses_hours;
   const row = i => `<div class="cu-row${i.pending ? '' : ' done'}" data-id="${i.id}">
       <div class="cu-name"><strong>${h(i.name)}</strong> <span class="small muted">every ${every(i)}</span>
         ${i.estimated ? `<div class="small muted">Now: ~${fmtMonth(i.last_done_date)}${i.last_done_miles != null ? ` @ ~${miles(i.last_done_miles)}` : ''}</div>` : ''}${i.due_now && !i.answer ? '<div class="small" style="color:var(--amber)">Marked due now</div>' : ''}</div>
@@ -613,12 +628,13 @@ async function viewCatchup(seq, id) {
   const pending = d.items.filter(i => i.pending), rest = d.items.filter(i => !i.pending);
   app.innerHTML = `<div class="car-head"><a class="btn ghost sm" href="#/car/${c.id}/maintenance">‹ ${h(c.nickname)}</a><div><h1>Catch up</h1><div class="ymm">${h(ymm(c))}</div></div></div>
     ${!d.items.length ? '<div class="card big-check">Every item has a real service logged. Nothing to catch up.</div>' : `
-    <section class="card cu-step" id="cu-1"><h2><span class="cu-num">1</span> Odometer now</h2>
+    <section class="card cu-step" id="cu-1"><h2><span class="cu-num">1</span> ${H ? 'Hour meter and odometer now' : 'Odometer now'}</h2>
       <p class="small muted" style="margin-top:0">${c.mileage_updated_at ? `Last updated ${fmtDate(c.mileage_updated_at)}.` : ''} Fix it if it's off.</p>
+      ${H ? `<div class="cu-miles"><input id="cu-hours" type="number" inputmode="decimal" min="0" step="0.1" value="${c.hours ?? ''}" aria-label="Current engine hours"><span>h</span></div>` : ''}
       <div class="cu-miles"><input id="cu-miles" type="number" inputmode="numeric" min="0" value="${c.mileage ?? ''}" aria-label="Current mileage"><span>mi</span></div>
       <button type="button" class="btn primary cu-go" id="cu-ok">That's right</button></section>
     <section id="cu-2" class="cu-items hidden"><h2><span class="cu-num">2</span> Roughly when was each last done?</h2>
-      <p class="small muted">Tap your best guess. These are saved as estimates (shown with ~), not as service history. ${d.miles_per_month ? `Miles are estimated at about ${d.miles_per_month.toLocaleString('en-US')} mi/month.` : "This car's miles per month isn't known yet, so only dates are saved (the monthly mileage check builds that up)."} "Don't remember" stops it asking; "Never" marks it due now.</p>
+      <p class="small muted">Tap your best guess. These are saved as estimates (shown with ~), not as service history. ${d.miles_per_month ? `Miles are estimated at about ${d.miles_per_month.toLocaleString('en-US')} mi/month.` : `This ${vnoun(c)}'s miles per month isn't known yet, so only dates are saved (the monthly mileage check builds that up).`}${H ? (d.hours_per_month ? ` Hours at about ${d.hours_per_month} h/month.` : ' Hours per month isn\'t known yet either, so no hours are estimated.') : ''} "Don't remember" stops it asking; "Never" marks it due now.</p>
       ${pending.map(row).join('')}
       ${rest.length ? `<details class="cu-more"${pending.length ? '' : ' open'}><summary class="small muted">${rest.length} already answered (change them here)</summary>${rest.map(row).join('')}</details>` : ''}
     </section>
@@ -633,6 +649,7 @@ async function viewCatchup(seq, id) {
     document.getElementById('cu-2').scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
   document.getElementById('cu-miles').oninput = upd;
+  if (document.getElementById('cu-hours')) document.getElementById('cu-hours').oninput = () => { document.getElementById('cu-save').disabled = false; };
   document.getElementById('cu-2').onclick = e => {
     const b = e.target.closest('[data-a]'); if (!b) return;
     const r = b.closest('[data-id]');
@@ -643,7 +660,7 @@ async function viewCatchup(seq, id) {
     const btn = document.getElementById('cu-save'); btn.disabled = true;
     try {
       const answers = Object.fromEntries(changed().map(k => [k, picked[k]]));
-      const r = await api(`/api/cars/${c.id}/catchup`, { method: 'POST', body: { mileage: document.getElementById('cu-miles').value, answers } });
+      const r = await api(`/api/cars/${c.id}/catchup`, { method: 'POST', body: { mileage: document.getElementById('cu-miles').value, hours: document.getElementById('cu-hours')?.value, answers } });
       toast(`Saved ${r.updated} answer${r.updated === 1 ? '' : 's'}`, true);
       location.hash = `#/car/${c.id}/maintenance`;
     } finally { btn.disabled = false; }
@@ -663,13 +680,20 @@ async function tabOverview(el, d, reload) {
   el.innerHTML = `${activeDiagHtml(d.diagnoses)}${fluidsCard(d.fluids, c.id)}<div class="symptom-bar dg-sbar">${symptomBtn(c.id)}${diagBtn(c.id, '', 'Diagnose a problem', 'dg-btn')}</div><div class="grid2">
     <div>
       <div class="mini-stage" id="stage3d" style="height:min(56vw,360px)"></div>
-      <p class="small muted" style="margin:6px 2px 0">${HAS_GL ? 'Drag to spin.' : ''} Model of a ${h(ymm(c))}; your own photos are below.</p>
+      <p class="small muted" style="margin:6px 2px 0">${HAS_GL ? 'Drag to spin.' : ''} Model of a ${h(ymm(c))}${c.needs_info?.some(n => n.field === 'color') ? ' in a placeholder color until you set yours' : ''}; your own photos are below.</p>
       <div class="card" style="margin-top:12px">
-        <div class="section-title" style="margin-top:0"><h2>My car</h2><label class="btn sm" for="photo-in">Add photo</label><input id="photo-in" type="file" accept="image/*" multiple class="sr"></div>
-        <div class="thumbs">${d.photos.length ? d.photos.map(p => `<a href="/api/files/${p.id}" target="_blank" rel="noopener"><img src="/api/files/${p.id}" alt="${h(p.filename)}" loading="lazy"></a>`).join('') : '<span class="muted small">No photos yet. Add a few of the real car.</span>'}</div>
+        <div class="section-title" style="margin-top:0"><h2>My ${h(vnoun(c))}</h2><label class="btn sm" for="photo-in">Add photo</label><input id="photo-in" type="file" accept="image/*" multiple class="sr"></div>
+        <div class="thumbs">${d.photos.length ? d.photos.map(p => `<a href="/api/files/${p.id}" target="_blank" rel="noopener"><img src="/api/files/${p.id}" alt="${h(p.filename)}" loading="lazy"></a>`).join('') : `<span class="muted small">No photos yet. Add a few of the real ${h(vnoun(c))}.</span>`}</div>
       </div>
     </div>
     <div>
+      ${c.needs_info?.length ? `<div class="card needs-card"><h2>Needs info</h2><p class="small" style="margin:0 0 8px">Still unknown: <strong>${c.needs_info.map(n => h(n.label)).join(', ')}</strong>. Fill them in with Edit ${h(vnoun(c))}${c.needs_info.some(n => n.field === 'mileage') ? ', or type the reading below' : ''}; catch-up uses them.</p><button class="btn sm" type="button" id="fill-info">Fill in now</button></div>` : ''}
+      ${usesHours(c) ? `<div class="card"><div class="row" style="align-items:center">
+          <div style="flex:1"><div class="small muted">Engine hours${c.hours_updated_at ? ` · updated ${fmtDate(c.hours_updated_at)}` : ''}</div><div class="big-num">${hrs(c.hours)}</div></div>
+          <form id="hours-form" class="row" style="flex:1;min-width:200px;align-items:flex-end">
+            <div class="field" style="margin:0;flex:1"><label for="new-hours">Update hours</label><input id="new-hours" name="hours" type="number" inputmode="decimal" min="0" step="0.1" placeholder="${c.hours ?? ''}" required></div>
+            <button class="btn primary" type="submit">Save</button>
+          </form></div></div>` : ''}
       <div class="card">
         <div class="row" style="align-items:center">
           <div style="flex:1"><div class="small muted">Odometer${c.mileage_updated_at ? ` · updated ${fmtDate(c.mileage_updated_at)}` : ''}</div><div class="big-num">${miles(c.mileage)}</div></div>
@@ -690,6 +714,14 @@ async function tabOverview(el, d, reload) {
   mountCar(document.getElementById('stage3d'), c, { key: `car:${c.id}`, garage: false });
   // #/car/<id>/mileage (link in the monthly mileage notification): overview with the odometer box ready to type in
   if (/\/mileage$/.test(location.hash)) { const inp = document.getElementById('new-miles'); inp.scrollIntoView({ block: 'center' }); inp.focus(); }
+  // #/car/<id>/hours (the monthly prompt for UTVs / ATVs): the hours box ready to type in
+  if (/\/hours$/.test(location.hash)) { const inp = document.getElementById('new-hours') || document.getElementById('new-miles'); inp.scrollIntoView({ block: 'center' }); inp.focus(); }
+  document.getElementById('fill-info')?.addEventListener('click', () => editCar(c));
+  if (document.getElementById('hours-form')) document.getElementById('hours-form').onsubmit = safe(async e => {
+    e.preventDefault();
+    await api(`/api/cars/${c.id}/hours`, { method: 'POST', body: { hours: e.target.hours.value } });
+    toast('Hours updated', true); reload();
+  });
   document.getElementById('miles-form').onsubmit = safe(async e => {
     e.preventDefault();
     await api(`/api/cars/${c.id}/mileage`, { method: 'POST', body: { mileage: e.target.mileage.value } });
@@ -702,10 +734,12 @@ async function tabOverview(el, d, reload) {
   });
 }
 
-function itemForm(i = {}) {
+function itemForm(i = {}, car = {}) {
+  const H = usesHours(car) || i.interval_hours != null;
   return `${field('Name', 'name', i.name, 'text', 'required maxlength="120"')}
-  <div class="row">${field('Every (miles)', 'interval_miles', i.interval_miles ?? '', 'number', 'min="1" inputmode="numeric"')}${field('Every (months)', 'interval_months', i.interval_months ?? '', 'number', 'min="1" inputmode="numeric"')}</div>
-  <div class="row">${field('Last done (date)', 'last_done_date', i.last_done_date ?? '', 'date')}${field('Last done (miles)', 'last_done_miles', i.last_done_miles ?? '', 'number', 'min="0" inputmode="numeric"')}</div>
+  <div class="row">${field('Every (miles)', 'interval_miles', i.interval_miles ?? '', 'number', 'min="1" inputmode="numeric"')}${H ? field('Every (hours)', 'interval_hours', i.interval_hours ?? '', 'number', 'min="1" step="0.1" inputmode="decimal"') : ''}${field('Every (months)', 'interval_months', i.interval_months ?? '', 'number', 'min="1" inputmode="numeric"')}</div>
+  <p class="small muted" style="margin-top:-4px">Any of miles / ${H ? 'hours / ' : ''}months, whichever comes first. Months only = a date-based item (e.g. tire age, battery).</p>
+  <div class="row">${field('Last done (date)', 'last_done_date', i.last_done_date ?? '', 'date')}${field('Last done (miles)', 'last_done_miles', i.last_done_miles ?? '', 'number', 'min="0" inputmode="numeric"')}${H ? field('Last done (hours)', 'last_done_hours', i.last_done_hours ?? '', 'number', 'min="0" step="0.1" inputmode="decimal"') : ''}</div>
   <label class="check"><input type="checkbox" name="due_now" ${i.due_now ? 'checked' : ''}> Due now (regardless of interval)</label>
   ${area('Notes', 'notes', i.notes ?? '')}`;
 }
@@ -714,12 +748,13 @@ async function tabMaintenance(el, d, reload) {
   const c = d.car;
   el.innerHTML = `<div class="section-title" style="margin-top:0"><h2>Schedule</h2><a class="btn sm" href="#/catchup/${c.id}" style="margin-left:auto">Catch up</a><button class="btn sm primary" id="add-item" style="margin-left:0">Add item</button></div>
     <p class="small muted">Dates and miles marked <strong>~</strong> are estimates from the catch-up screen; logging a real service replaces them.</p>
-    <p class="small muted">Researched schedule: items marked <span class="chip">manual</span> come from the owner's manual, <span class="chip">typical</span> are common practice. Full details on the Research tab.</p>
+    <p class="small muted">Researched schedule: items marked <span class="chip">manual</span> come from the owner's manual, <span class="chip">typical</span> are common practice. Full details on the Research tab.${usesHours(c) ? ' Off-road: due by engine hours, miles or months, whichever comes first.' : ''}</p>
+    ${['utv', 'atv'].includes(c.vehicle_type) ? '<p class="small card water-note"><strong>After every deep mud or water crossing:</strong> check the front diff, rear diff / transmission / gearcase, the CVT housing (drain plug) and the air box for water. Milky or creamy fluid means water got in: change it now.</p>' : ''}
     ${d.items.map(i => `<details class="item" data-id="${i.id}">
       <summary>${pill(i.status, i.label === 'Due now' ? 'Due now' : null)}
-        <div><div class="name">${h(i.name)} ${i.source === 'manual' ? '<span class="chip">manual</span>' : i.source === 'typical' ? '<span class="chip">typical</span>' : ''}${i.severe ? '<span class="chip" style="border-color:#ffb02066">severe service</span>' : ''}</div><div class="meta">Every ${[i.interval_miles ? miles(i.interval_miles) : null, i.interval_months ? `${i.interval_months} mo` : null].filter(Boolean).join(' / ')}
+        <div><div class="name">${h(i.name)} ${i.source === 'manual' ? '<span class="chip">manual</span>' : i.source === 'typical' ? '<span class="chip">typical</span>' : ''}${i.severe ? '<span class="chip" style="border-color:#ffb02066">severe service</span>' : ''}</div><div class="meta">Every ${everyText(i)}
           · Last: ${lastDoneText(i)}</div></div>
-        <div class="next">${i.next_due_miles != null ? `Next ${i.last_done_estimated ? '~' : ''}${miles(i.next_due_miles)}` : ''}${i.next_due_miles != null && i.next_due_date ? '<br>' : ''}${i.next_due_date ? `by ${i.last_done_estimated ? '~' : ''}${fmtDate(i.next_due_date)}` : ''}${i.status === 'unknown' ? '<span class="muted">—</span>' : ''}</div>
+        <div class="next">${i.next_due_hours != null ? `Next ${i.last_done_estimated ? '~' : ''}${hrs(i.next_due_hours)}${i.next_due_miles != null || i.next_due_date ? '<br>' : ''}` : ''}${i.next_due_miles != null ? `${i.next_due_hours != null ? '' : 'Next '}${i.last_done_estimated ? '~' : ''}${miles(i.next_due_miles)}` : ''}${i.next_due_miles != null && i.next_due_date ? '<br>' : ''}${i.next_due_date ? `by ${i.last_done_estimated ? '~' : ''}${fmtDate(i.next_due_date)}` : ''}${i.status === 'unknown' ? '<span class="muted">—</span>' : ''}</div>
       </summary>
       <div class="body">
         <p class="small">${h(i.label)}</p>
@@ -727,7 +762,7 @@ async function tabMaintenance(el, d, reload) {
         ${i.severe_note ? `<p class="small"><span class="chip" style="border-color:#ffb02066">severe service</span> ${h(i.severe_note)}</p>` : ''}
         <p class="small muted">Source: ${i.source === 'manual' ? "owner's manual" : i.source === 'typical' ? 'typical interval (not in the manual), verify' : i.source === 'user' ? 'added by you' : 'typical interval, verify against the manual'}</p>
         <h3 style="font-size:1rem;margin-top:10px">History</h3>
-        ${i.history.length ? `<ul class="list small">${i.history.map(s => `<li><span>${fmtDate(s.date)}${s.mileage != null ? ` @ ${miles(s.mileage)}` : ''}</span><span class="grow">${h(s.title)}</span></li>`).join('')}</ul>` : '<p class="small muted">No service logged for this yet.</p>'}
+        ${i.history.length ? `<ul class="list small">${i.history.map(s => `<li><span>${fmtDate(s.date)}${s.mileage != null ? ` @ ${miles(s.mileage)}` : ''}${s.hours != null ? ` @ ${hrs(s.hours)}` : ''}</span><span class="grow">${h(s.title)}</span></li>`).join('')}</ul>` : '<p class="small muted">No service logged for this yet.</p>'}
         <div class="row" style="margin-top:10px">
           <button class="btn sm primary" data-act="log">Log service</button>
           <button class="btn sm" data-act="last">Set last done</button>
@@ -735,18 +770,18 @@ async function tabMaintenance(el, d, reload) {
           <button class="btn sm danger" data-act="del">Delete</button>
         </div>
       </div></details>`).join('')}`;
-  document.getElementById('add-item').onclick = () => modal('Add schedule item', itemForm(), {
+  document.getElementById('add-item').onclick = () => modal('Add schedule item', itemForm({}, c), {
     onSubmit: async f => { await api(`/api/cars/${c.id}/items`, { method: 'POST', body: f }); toast('Added', true); reload(); },
   });
   el.onclick = safe(async e => {
     const b = e.target.closest('[data-act]'); if (!b) return;
     const it = d.items.find(i => i.id === b.closest('[data-id]').dataset.id);
     if (b.dataset.act === 'log') return logService(d, { item_ids: [it.id], title: it.name }, reload);
-    if (b.dataset.act === 'last') return modal(`Last done: ${it.name}`, `<div class="row">${field('Date', 'last_done_date', it.last_done_date || TODAY, 'date')}${field('Mileage', 'last_done_miles', it.last_done_miles ?? c.mileage ?? '', 'number', 'min="0" inputmode="numeric"')}</div>
+    if (b.dataset.act === 'last') return modal(`Last done: ${it.name}`, `<div class="row">${field('Date', 'last_done_date', it.last_done_date || TODAY, 'date')}${field('Mileage', 'last_done_miles', it.last_done_miles ?? c.mileage ?? '', 'number', 'min="0" inputmode="numeric"')}${usesHours(c) || it.interval_hours ? field('Hours', 'last_done_hours', it.last_done_hours ?? c.hours ?? '', 'number', 'min="0" step="0.1" inputmode="decimal"') : ''}</div>
       <p class="small muted">Tip: logging a service in History does this automatically and keeps a record.</p>`, {
       onSubmit: async f => { await api(`/api/items/${it.id}`, { method: 'PATCH', body: { ...f, due_now: false } }); reload(); },
     });
-    if (b.dataset.act === 'edit') return modal('Edit schedule item', itemForm(it), {
+    if (b.dataset.act === 'edit') return modal('Edit schedule item', itemForm(it, c), {
       onSubmit: async f => { await api(`/api/items/${it.id}`, { method: 'PATCH', body: f }); reload(); },
     });
     if (b.dataset.act === 'del') return modal('Delete schedule item?', `<p>Remove <strong>${h(it.name)}</strong> from the schedule? Service history stays.</p>`, {
@@ -757,7 +792,7 @@ async function tabMaintenance(el, d, reload) {
 
 function serviceForm(d, s = {}) {
   const ids = new Set(s.item_ids || []);
-  return `<div class="row">${field('Date', 'date', s.date || TODAY, 'date', 'required')}${field('Mileage', 'mileage', s.mileage ?? d.car.mileage ?? '', 'number', 'min="0" inputmode="numeric"')}</div>
+  return `<div class="row">${field('Date', 'date', s.date || TODAY, 'date', 'required')}${field('Mileage', 'mileage', s.mileage ?? d.car.mileage ?? '', 'number', 'min="0" inputmode="numeric"')}${usesHours(d.car) || s.hours != null ? field('Engine hours', 'hours', s.hours ?? d.car.hours ?? '', 'number', 'min="0" step="0.1" inputmode="decimal"') : ''}</div>
     ${field('What was done', 'title', s.title || '', 'text', 'required maxlength="160" placeholder="e.g. Oil & filter change"')}
     ${area('Details', 'details', s.details || '')}
     ${field('Parts', 'parts', s.parts || '', 'text', 'placeholder="brand, part numbers, quantities"')}
@@ -789,7 +824,7 @@ async function tabHistory(el, d, reload) {
   el.innerHTML = `<div class="section-title" style="margin-top:0"><h2>Service history</h2><span class="row" style="gap:8px">${scanBtn(d.car.id, 'sm', 'Scan receipt')}<button class="btn sm primary" id="log">Log service</button></span></div>
     ${total ? `<p class="small muted">Total recorded: ${money(total)}</p>` : ''}
     ${d.services.length ? d.services.map(s => { const dg = (d.diagnoses || []).find(x => x.service_id === s.id); return `<article class="svc${dg ? ' dg-svc' : ''}" data-id="${s.id}">
-      <div class="row" style="align-items:baseline"><span class="when">${fmtDate(s.date)}${s.mileage != null ? ` · ${miles(s.mileage)}` : ''}</span><strong style="flex:1">${h(s.title)}</strong>
+      <div class="row" style="align-items:baseline"><span class="when">${fmtDate(s.date)}${s.mileage != null ? ` · ${miles(s.mileage)}` : ''}${s.hours != null ? ` · ${hrs(s.hours)}` : ''}</span><strong style="flex:1">${h(s.title)}</strong>
         <span class="small muted">${s.diy ? 'DIY' : h(s.shop || '')}${s.cost_cents != null ? ` · ${money(s.cost_cents)}` : ''}</span></div>
       ${dg ? `<div><span class="chip dg-chip">${DIAG_ICON} guided diagnosis</span> <a class="small" href="#/diag/${dg.session_id}">Open the checks ›</a></div>` : ''}
       ${s.details ? `<div class="details">${h(s.details)}</div>` : ''}
@@ -1027,10 +1062,29 @@ const srcLinks = list => (list || []).length ? `<div class="small">${(Array.isAr
 const flatText = v => v == null ? '' : Array.isArray(v) ? v.map(flatText).join('; ') : typeof v === 'object' ? Object.entries(v).map(([k, x]) => `${k.replace(/_/g, ' ')}: ${flatText(x)}`).join('; ') : String(v);
 const PRIO = [['now', 'Do now', 'overdue'], ['soon', 'Soon', 'soon'], ['decision', 'Decision', 'soon'], ['watch', 'Watch', 'ok'], ['skip', 'Skip', 'unknown']];
 
+// Live recall lookup (GET /api/cars/:id/recalls): NHTSA for road vehicles, CPSC for UTVs / ATVs, official links as the fallback.
+const offroad = c => ['utv', 'atv'].includes(c?.vehicle_type);
+const recallIntro = c => offroad(c)
+  ? `Off-road vehicles are recalled through the <a href="https://www.cpsc.gov/Recalls" target="_blank" rel="noopener noreferrer">CPSC</a>, not NHTSA; also check the maker's own VIN recall lookup. Recall repairs are free.`
+  : `Check open recalls by VIN at <a href="https://www.nhtsa.gov/recalls" target="_blank" rel="noopener noreferrer">nhtsa.gov/recalls</a>${c.vin ? ` (VIN ${h(c.vin)})` : ` (add the VIN in Edit ${h(vnoun(c))})`}. Recall repairs are free.`;
+const recallLookup = c => `<p class="small"><button type="button" class="btn sm" data-recalls="${h(c.id)}">Look up recalls now (${offroad(c) ? 'CPSC' : 'NHTSA'})</button></p><div class="recall-live small"></div>`;
+function bindRecallLookup(el) {
+  el.querySelectorAll('[data-recalls]').forEach(b => { b.onclick = safe(async () => {
+    const out = b.closest('section, .card, div').querySelector('.recall-live') || b.parentElement.nextElementSibling;
+    b.disabled = true; out.textContent = 'Looking it up…';
+    const r = await api(`/api/cars/${b.dataset.recalls}/recalls`);
+    const link = r.cpsc_search || r.nhtsa_vin_check;
+    out.innerHTML = `${r.error ? `<p class="muted">${h(r.error)}</p>` : `<p class="muted">${h(r.source || '')}: ${r.results.length} found${r.checked_models ? ` (models checked: ${h(r.checked_models.join(', '))})` : r.query ? ` (searched "${h(r.query)}")` : ''}.${r.note ? ` ${h(r.note)}` : ''}</p>`}
+      <ul class="list">${(r.results || []).map(x => `<li><div class="grow"><strong>${h(x.campaign || '')}</strong> <span class="small muted">${h(x.date || '')}${x.component ? ` · ${h(x.component)}` : ''}</span><div class="small">${h(x.title || x.summary || '')}</div>${x.remedy ? `<div class="small muted">${h(x.remedy)}</div>` : ''}${x.url ? srcLinks([x.url]) : ''}</div></li>`).join('')}</ul>
+      ${link ? `<p class="small"><a href="${hu(link)}" target="_blank" rel="noopener noreferrer">${h(hostOf(link))}</a>${r.maker_lookup ? ` · ${h(r.maker_lookup)}` : ''}</p>` : ''}`;
+    b.disabled = false;
+  }); });
+}
+
 async function tabResearch(el, d) {
   const c = d.car;
   const { data: r, md: report } = await api(`/api/cars/${c.id}/research`);
-  if (!r) { el.innerHTML = '<p class="muted">No research loaded for this car yet.</p>'; return; }
+  if (!r) { el.innerHTML = `<p class="muted">No research loaded for this ${h(vnoun(c))} yet.</p><section class="card"><h2>Recalls</h2><p class="small">${recallIntro(c)}</p>${recallLookup(c)}</section>`; bindRecallLookup(el); return; }
   const disc = disclaimerNote('card disclaimer-top');
   const M = c.mileage || 0;
   const v = r.vehicle || {};
@@ -1070,7 +1124,7 @@ async function tabResearch(el, d) {
     </section>
     <div class="grid2">
       <section class="card"><h2>Recalls</h2>
-        <p class="small">Check open recalls by VIN at <a href="https://www.nhtsa.gov/recalls" target="_blank" rel="noopener noreferrer">nhtsa.gov/recalls</a>${c.vin ? ` (VIN ${h(c.vin)})` : ' (add the VIN in Edit car)'}. Recall repairs are free.</p>
+        <p class="small">${recallIntro(c)}</p>${recallLookup(c)}
         <ul class="list">${(r.recalls || []).map(x => `<li><div class="grow"><strong>${h(x.campaign)}</strong> <span class="small muted">${h(x.date || '')} · ${h(x.component || '')}</span><div class="small">${gk(x.summary)}</div><div class="small muted">${gk(x.remedy || '')}</div>${srcLinks(x.url ? [x.url] : [])}</div></li>`).join('') || '<li class="muted">None found.</li>'}</ul>
       </section>
       <section class="card"><h2>Technical service bulletins</h2>
@@ -1089,6 +1143,7 @@ async function tabResearch(el, d) {
       <section class="card"><h2>Open questions</h2><ol class="small">${(r.questions || []).map(q => `<li style="margin:4px 0">${gk(q)}</li>`).join('')}</ol></section>
     </div>
     ${report ? `<details class="card"><summary style="cursor:pointer"><strong>Full research report</strong></summary><div class="msg assistant" style="max-width:none;margin-top:10px">${md(report)}</div></details>` : ''}`;
+  bindRecallLookup(el);
 }
 const clip = (s, n) => { s = String(s ?? ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 
@@ -1104,8 +1159,8 @@ function fluidsCard(rows, carId, { full = false } = {}) {
       <div class="fl-buy">${h(f.buy)}${f.example ? `<div class="small muted">e.g. ${h(f.example)}</div>` : ''}</div>
       <div class="fl-amt"><span class="fl-big">${h(f.amount)}</span>${f.amount_label ? ` <span class="small muted">(${h(f.amount_label)})</span>` : ''}${f.liters ? `<span class="fl-l">${h(f.liters)}</span>` : ''}
         ${f.total ? `<div class="fl-total"><span class="fl-big2">${h(f.total)}</span> <span class="small muted">${h(f.total_label || 'total')}</span>${f.total_liters ? `<span class="fl-l">${h(f.total_liters)}</span>` : ''}</div>` : ''}</div>
-      <div class="fl-notes small">${h(f.notes || '')}</div></div>`).join('')}
-    <p class="small muted" style="margin:8px 0 0">From the parts research (owner's manuals and GM/Mopar specs), Nov 2026. "verify" = not fully confirmed.</p></section>`;
+      <div class="fl-notes small">${f.warning ? `<div class="fl-warn" role="note"><strong>${f.jaso ? `JASO ${h(f.jaso)} only` : 'Warning'}:</strong> ${h(f.warning.replace(/^Use motorcycle oil rated JASO MA or MA2: /, ''))}</div>` : ''}${f.sump ? `<div class="fl-sump">${h(f.sump)}</div>` : ''}${h(f.notes || '')}</div></div>`).join('')}
+    <p class="small muted" style="margin:8px 0 0">${rows.every(f => f.generic) ? 'General guidance for this type of vehicle; check the owner\'s manual for the exact grade and amount.' : 'From the parts research (owner\'s manuals and maker specs). "verify" = not fully confirmed.'}</p></section>`;
 }
 const PART_GROUPS = ['Fluids', 'Filters', 'Ignition', 'Belts', 'Cooling', 'Brakes', 'Wipers', 'Bulbs', 'Battery', 'Tires', 'HVAC actuators', 'Parts for open issues', 'Other'];
 function partGroup(p) {
@@ -1177,7 +1232,7 @@ async function tabShopping(el, d) {
   const grp = (title, list, g) => `<section class="card"><div class="section-title" style="margin-top:0"><h2>${title}</h2><span class="sh-total" data-total="${g}"></span></div>${list.length ? `<ul class="list">${list.map((l, i) => row(l, g, i)).join('')}</ul>` : '<p class="muted">Nothing here.</p>'}</section>`;
   el.innerHTML = `<p class="small muted">${h(L.note)}</p>
     <div class="row" style="align-items:center;margin-bottom:10px"><strong class="sh-grand"></strong><button class="btn sm" id="copy-all">Copy all selected part numbers</button></div>
-    ${grp('Order on RockAuto', L.rockauto, 'ra')}${grp('Buy locally', L.local, 'lo')}
+    ${grp(h(L.online_label || 'Order on RockAuto'), L.rockauto, 'ra')}${grp(h(L.local_label || 'Buy locally'), L.local, 'lo')}
     ${(L.extras || []).length ? `<section class="card"><div class="section-title" style="margin-top:0"><h2>Tools and extras</h2><span class="sh-total" data-total="ex"></span></div><ul class="list">${L.extras.map((x, i) => `<li class="sh-row"><label class="check"><input type="checkbox" data-sh="ex-${i}" data-price="${priceNum(x.price_usd) ?? ''}" data-pn="${h(x.part_number || '')}" checked>
       <span><strong>${h(x.name)}</strong> <span class="chip">${h(x.kind)}</span></span></label>
       <div class="small">${x.part_number ? `<code>${h(x.part_number)}</code> <button type="button" class="copy" data-copy="${h(x.part_number)}">Copy</button> ` : ''}${x.price_usd ? `<strong>${h(usd(x.price_usd))}</strong> ` : ''}${x.url ? `<a href="${hu(x.url)}" target="_blank" rel="noopener noreferrer">${h(x.where || hostOf(x.url))}</a>` : `<span class="muted">${h(x.where || '')}</span>`}</div>
@@ -1205,7 +1260,7 @@ async function tabShopping(el, d) {
 
 async function tabParts(el, d) {
   const { data: pg, fluids, brands } = await loadParts(d.car.id);
-  if (!pg) { el.innerHTML = '<p class="muted">No parts research loaded for this car yet.</p>'; return; }
+  if (!pg) { el.innerHTML = `${fluidsCard(d.fluids, d.car.id, { full: true })}<p class="muted">No parts research loaded for this ${h(vnoun(d.car))} yet.${d.parts_sources?.stores ? ` Good places to look: ${d.parts_sources.stores.map(h).join(', ')}.` : ''}</p>`; return; }
   const groups = {};
   const bp = brands?.parts || [];
   const parts = [...pg.parts, ...bp.filter(b => !b.matched_part).map(b => ({ name: b.part, category: b.category || 'Other', spec: '', part_numbers: [], brand_only: true }))];
@@ -1225,7 +1280,7 @@ async function tabParts(el, d) {
   };
   const bnotes = brands?.meta?.notes || [];
   el.innerHTML = `${fluidsCard(fluids, d.car.id, { full: true })}
-    <div class="card callahead"><strong>Brand comparisons:</strong> RockAuto options are listed first. Local store prices and stock (AutoZone, NAPA, O'Reilly) were mostly <strong>not verifiable online</strong> (their sites blocked automated lookups): <strong>call ahead</strong>. Items marked <span class="pill unknown vtag">verify</span> / UNVERIFIED come from cross-references only.
+    <div class="card callahead"><strong>Brand comparisons:</strong> ${d.parts_sources?.online && d.parts_sources.online !== 'RockAuto' ? `${h(d.parts_sources.online)} options are listed first; check fitment on the OEM parts fiche (diagrams) and call the local dealer for stock.` : `RockAuto options are listed first. Local store prices and stock (AutoZone, NAPA, O'Reilly) were mostly <strong>not verifiable online</strong> (their sites blocked automated lookups): <strong>call ahead</strong>.`} Items marked <span class="pill unknown vtag">verify</span> / UNVERIFIED come from cross-references only.
       ${bnotes.length ? `<details><summary class="small muted" style="cursor:pointer">Research notes</summary><ul class="small">${bnotes.map(n => `<li>${h(n)}</li>`).join('')}</ul></details>` : ''}
       <p style="margin:8px 0 0"><a class="btn sm primary" href="#/car/${d.car.id}/shopping">Shopping list →</a></p></div>
     <nav class="part-nav small">${PART_GROUPS.filter(g => groups[g]).map(g => `<a href="#" data-jump="pg-${g.replace(/\W+/g, '-')}">${g} (${groups[g].length})</a>`).join('')}</nav>
@@ -1257,7 +1312,7 @@ async function tabAlternates(el, d) {
     ${p.no_alternate ? `<p class="small muted alt-none">No real alternate found.</p>` : ''}${p.note ? `<details class="alt-note small"><summary>Research note</summary>${h(p.note)}</details>` : ''}
     ${p.avoid.length ? `<div class="alt-avoid small"><span class="pill overdue tier">Avoid</span> ${p.avoid.map(a => `<span title="${h(a.why || '')}"><strong>${h(a.brand)}</strong>${a.part_number ? ` ${h(a.part_number)}` : ''}${a.why ? `: ${h(clip(a.why, 110))}` : ''}</span>`).join(' · ')}</div>` : ''}</article>`;
   el.innerHTML = `<div class="alt-top"><input type="search" id="alt-q" placeholder="Filter: oil filter, brakes, WIX…" aria-label="Filter parts">
-      <p class="small muted">${A.counts.with_alternates} of ${A.counts.parts} parts have alternates. <strong>OEM</strong> (or the first choice) is listed first, then other good brands, RockAuto first. <span class="pill unknown vtag">verify</span> = not confirmed for this exact engine: check by VIN. Prices are approximate (research date).</p></div>
+      <p class="small muted">${A.counts.with_alternates} of ${A.counts.parts} parts have alternates. <strong>OEM</strong> (or the first choice) is listed first, then other good brands, ${h(A.preferred_store || 'RockAuto')} first. <span class="pill unknown vtag">verify</span> = not confirmed for this exact engine: check by VIN. Prices are approximate (research date).</p></div>
     <div class="alt-grid">${A.parts.map(card).join('')}</div>
     ${A.spec_only.length ? `<p class="small muted">Spec only, no parts to compare: ${A.spec_only.map(h).join(', ')}.</p>` : ''}`;
   document.getElementById('alt-q').oninput = e => { const q = e.target.value.trim().toLowerCase(); el.querySelectorAll('.alt').forEach(a => a.classList.toggle('hidden', !!q && !a.dataset.q.includes(q))); };
@@ -1392,20 +1447,55 @@ async function tabScans(el, d, reload) {
 function carForm(c = {}) {
   const color = c.color || '#8a8f98';
   const presets = ['#e9e9e6', '#a9adb3', '#5f6368', '#121316', '#9b1c24', '#5b6f86', '#1f3a5f', '#2f3b2c', '#6b4f2a', '#c8b48a'];
+  const a = c.attrs || {}, vt = c.vehicle_type || 'car';
+  const opt = (name, label, vals, cur) => `<div class="field"><label for="f-${name}">${label}</label><select id="f-${name}" name="${name}"><option value="">Not sure</option>${vals.map(([k, l]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${l}</option>`).join('')}</select></div>`;
   return `<div class="preview-art" id="car-preview" style="height:200px"></div>
+    <div class="row"><div class="field"><label for="f-vehicle_type">Type</label><select id="f-vehicle_type" name="vehicle_type">${Object.entries(VEHICLE_TYPES).map(([k, l]) => `<option value="${k}" ${k === vt ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div class="field vin-field"><label for="f-vin">VIN</label><div class="row" style="gap:6px;flex-wrap:nowrap"><input id="f-vin" name="vin" type="text" value="${h(c.vin || '')}" maxlength="17" autocapitalize="characters" spellcheck="false" style="flex:1"><button type="button" class="btn sm" id="vin-look">Look up</button></div><div class="small muted" id="vin-msg"></div></div></div>
     <div class="row">${field('Name', 'nickname', c.nickname || '', 'text', 'required maxlength="60" placeholder="e.g. The Civic"')}${field('Year', 'year', c.year ?? '', 'number', 'min="1900" max="2100"')}</div>
     <div class="row">${field('Make', 'make', c.make || '')}${field('Model', 'model', c.model || '')}${field('Trim', 'trim', c.trim || '')}</div>
     <div class="row">${field('Engine', 'engine', c.engine || '')}${field('Transmission', 'transmission', c.transmission || '')}</div>
-    <div class="row">${field('VIN', 'vin', c.vin || '', 'text', 'maxlength="17" autocapitalize="characters" spellcheck="false"')}${field('Mileage', 'mileage', c.mileage ?? '', 'number', 'min="0" inputmode="numeric"')}</div>
-    ${c.id ? '' : '<p class="small"><button type="button" class="btn sm" id="vin-decode">Fill in from the VIN</button> <span class="muted">(NHTSA decoder)</span></p>'}
-    <div class="row"><div class="field"><label for="f-body">Body type</label><select id="f-body" name="body_type">${Object.entries(BODY_LABELS).map(([k, l]) => `<option value="${k}" ${k === (c.body_type || 'sedan') ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+    <div class="row">${field('Mileage', 'mileage', c.mileage ?? '', 'number', 'min="0" inputmode="numeric"')}<div class="field hours-field${['utv', 'atv'].includes(vt) || c.hours != null ? '' : ' hidden'}"><label for="f-hours">Engine hours</label><input id="f-hours" name="hours" type="number" min="0" step="0.1" inputmode="decimal" value="${h(c.hours ?? '')}"></div></div>
+    <div class="row moto-fields${['motorcycle', 'utv', 'atv'].includes(vt) ? '' : ' hidden'}">${opt('attr_cooling', 'Cooling', [['air', 'Air'], ['oil-air', 'Oil / air'], ['liquid', 'Liquid']], a.cooling)}${opt('attr_fuel_system', 'Fuel', [['carbureted', 'Carbureted'], ['efi', 'Fuel injected']], a.fuel_system)}${opt('attr_clutch', 'Clutch', [['wet', 'Wet (oil bath)'], ['dry', 'Dry'], ['cvt', 'CVT / automatic']], a.clutch)}${opt('attr_final_drive', 'Final drive', [['chain', 'Chain'], ['shaft', 'Shaft'], ['belt', 'Belt']], a.final_drive)}</div>
+    <div class="row"><div class="field"><label for="f-body">Body / style (3D model)</label><select id="f-body" name="body_type">${Object.entries(BODY_LABELS).map(([k, l]) => `<option value="${k}" ${k === (c.body_type || 'sedan') ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       <div class="field"><label>Body color</label><div class="swatches">${presets.map(p => `<button type="button" data-color="${p}" style="background:${p}" aria-label="${p}" class="${p === color ? 'on' : ''}"></button>`).join('')}<input type="color" name="color" value="${h(color)}" aria-label="Custom color"></div></div></div>
     ${area('Notes', 'notes', c.notes || '')}
     ${c.id ? `<div class="field"><label>Your own 3D model <span class="muted small">(optional .glb, up to ${CONFIG.glb_max_mb || 15} MB; replaces the ${h((BODY_LABELS[c.body_type] || 'body style').toLowerCase())} shape)</span></label>
       <div class="row" style="align-items:center"><label class="btn sm" for="glb-in">${c.model_url ? 'Replace .glb' : 'Upload .glb'}</label><input id="glb-in" type="file" accept=".glb,model/gltf-binary" class="sr">${c.model_url ? '<button type="button" class="btn sm danger" id="glb-del">Remove model</button>' : ''}</div>
       <p class="small muted">A binary glTF you made or are allowed to use. Name the body material "paint" to have it take the color above. Draco-compressed files aren't supported.</p></div>` : ''}`;
 }
+/** Form fields -> API body: attr_* selects become attrs (keeping the needs-info list), empty hours dropped. */
+function carBody(f, c = {}) {
+  const out = { ...f }, attrs = { ...(c.attrs || {}) };
+  let any = false;
+  for (const k of Object.keys(f)) if (k.startsWith('attr_')) { any = true; const key = k.slice(5); if (f[k]) attrs[key] = f[k]; else delete attrs[key]; delete out[k]; }
+  if (any) out.attrs = attrs;
+  if (out.hours === '' && c.hours == null) delete out.hours;
+  return out;
+}
 function bindCarForm(form, c = {}) {
+  const typeSel = form.querySelector('[name=vehicle_type]'), bodySel = form.querySelector('[name=body_type]');
+  const syncType = () => {
+    const t = typeSel.value;
+    if (!(TYPE_BODIES[t] || []).includes(bodySel.value)) { bodySel.value = (TYPE_BODIES[t] || ['sedan'])[0]; bodySel.dispatchEvent(new Event('change')); }
+    form.querySelector('.hours-field').classList.toggle('hidden', !['utv', 'atv'].includes(t) && !form.querySelector('[name=hours]').value);
+    form.querySelector('.moto-fields').classList.toggle('hidden', !['motorcycle', 'utv', 'atv'].includes(t));
+  };
+  typeSel.addEventListener('change', syncType);
+  form.querySelector('#vin-look').onclick = safe(async () => {
+    const vin = form.querySelector('[name=vin]').value.trim().toUpperCase(), msg = form.querySelector('#vin-msg');
+    if (vin.length < 5) { msg.textContent = 'Type the VIN first (17 characters).'; return; }
+    msg.textContent = 'Looking it up…';
+    const r = await api(`/api/vin/${encodeURIComponent(vin)}`);
+    if (!r.ok) { msg.textContent = r.error; return; }
+    const d = r.decoded;
+    for (const k of ['year', 'make', 'model', 'trim', 'engine', 'transmission']) { const inp = form.querySelector(`[name=${k}]`); if (inp && d[k] && !inp.value) inp.value = d[k]; }
+    const nn = form.querySelector('[name=nickname]'); if (nn && !nn.value && d.model) nn.value = d.model;
+    if (d.vehicle_type) { typeSel.value = d.vehicle_type; syncType(); }
+    if (d.body_type) { bodySel.value = d.body_type; bodySel.dispatchEvent(new Event('change')); }
+    for (const [k, v] of Object.entries(d.attrs || {})) { const sel = form.querySelector(`[name=attr_${k}]`); if (sel && !sel.value) sel.value = v; }
+    msg.textContent = `${[d.year, d.make, d.model].filter(Boolean).join(' ')}${d.body_class ? ` (${d.body_class})` : ''}${r.note ? `. ${r.note}` : ''} Empty fields were filled in; check them.`;
+  });
   const prev = form.querySelector('#car-preview');
   const colorIn = form.querySelector('[name=color]');
   let pv = null;
@@ -1420,24 +1510,14 @@ function bindCarForm(form, c = {}) {
     pv.init().then(() => { pv.show({ ...c, ...formData(form) }, 0); pv.setColor(colorIn.value); }).catch(() => { pv = null; draw(); });
     const obs = new MutationObserver(() => { if (!document.body.contains(form)) { pv?.dispose(); obs.disconnect(); } });
     obs.observe(document.body, { childList: true });
-    form.querySelector('[name=body_type]').onchange = form.querySelector('[name=model]').onchange = form.querySelector('[name=make]').onchange = () => pv?.show({ ...c, ...formData(form) }, 0);
+    form.querySelector('[name=body_type]').onchange = form.querySelector('[name=model]').onchange = form.querySelector('[name=make]').onchange = typeSel.onchange = () => pv?.show({ ...c, ...formData(form) }, 0);
   } else draw();
   colorIn.oninput = () => { form.querySelectorAll('.swatches button').forEach(b => b.classList.remove('on')); draw(); };
   form.querySelector('.swatches').onclick = e => { const b = e.target.closest('[data-color]'); if (!b) return; colorIn.value = b.dataset.color; form.querySelectorAll('.swatches button').forEach(x => x.classList.toggle('on', x === b)); draw(); };
   form.querySelector('[name=body_type]').addEventListener('change', () => { if (!pv) draw(); });
-  form.querySelector('#vin-decode')?.addEventListener('click', safe(async () => {
-    const vin = form.querySelector('[name=vin]').value.trim().toUpperCase();
-    if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) throw new Error('Type the 17-character VIN first');
-    const d = await api(`/api/vin/${vin}`);
-    for (const k of ['year', 'make', 'model', 'trim', 'engine', 'transmission']) { const el = form.querySelector(`[name=${k}]`); if (el && d[k] && !el.value) el.value = d[k]; }
-    if (d.body_type) form.querySelector('[name=body_type]').value = d.body_type;
-    const nn = form.querySelector('[name=nickname]'); if (!nn.value && d.model) nn.value = d.model;
-    form.querySelector('[name=body_type]').dispatchEvent(new Event('change'));
-    toast(d.error ? `Decoded with a warning: ${d.error}` : `Found a ${[d.year, d.make, d.model].filter(Boolean).join(' ')}`, true);
-  }));
 }
 function editCar(c) {
-  modal(`Edit ${c.nickname}`, carForm(c) + `<p><button type="button" class="btn sm danger" id="archive">Archive this car</button></p>`, {
+  modal(`Edit ${c.nickname}`, carForm(c) + `<p><button type="button" class="btn sm danger" id="archive">Archive this ${h(vnoun(c))}</button></p>`, {
     wide: true,
     onOpen: f => {
       bindCarForm(f, c);
@@ -1452,19 +1532,19 @@ function editCar(c) {
       f.querySelector('#glb-del')?.addEventListener('click', safe(async () => { await api(`/api/cars/${c.id}/model`, { method: 'DELETE' }); toast('Model removed', true); document.querySelector('.modal-back')?.remove(); dropViewer(); render(); }));
       f.querySelector('#archive').onclick = safe(async () => { if (!confirm(`Archive ${c.nickname}? It disappears from the garage (data is kept).`)) return; await api(`/api/cars/${c.id}`, { method: 'DELETE' }); document.querySelector('.modal-back')?.remove(); location.hash = '#/'; });
     },
-    onSubmit: async f => { await api(`/api/cars/${c.id}`, { method: 'PATCH', body: f }); toast('Saved', true); dropViewer(); render(); },
+    onSubmit: async f => { await api(`/api/cars/${c.id}`, { method: 'PATCH', body: carBody(f, c) }); toast('Saved', true); dropViewer(); render(); },
   });
 }
 async function viewNewCar(seq) {
   dropViewer();
-  app.innerHTML = `<div class="card" style="max-width:760px;margin:0 auto"><h1>Add a car</h1><form id="new-car">${carForm({})}
-    <label class="check"><input type="checkbox" name="default_schedule" checked> Start with a typical maintenance schedule (oil, tires, filters, fluids…)</label>
-    <div class="modal-actions"><a class="btn ghost" href="#/">Cancel</a><button class="btn primary">Add car</button></div></form></div>`;
+  app.innerHTML = `<div class="card" style="max-width:760px;margin:0 auto"><h1>Add a vehicle</h1><p class="small muted">Car, truck, van, SUV, motorcycle, side-by-side or ATV. Type the VIN and tap Look up to fill in the rest (off-road VINs are often only partly covered; fill in what's missing by hand).</p><form id="new-car">${carForm({})}
+    <label class="check"><input type="checkbox" name="default_schedule" checked> Start with a typical maintenance schedule for this type (oil, filters, fluids, tires…; bikes and off-road get their own, by hours for UTVs / ATVs)</label>
+    <div class="modal-actions"><a class="btn ghost" href="#/">Cancel</a><button class="btn primary">Add</button></div></form></div>`;
   const form = document.getElementById('new-car');
   bindCarForm(form, {});
   form.onsubmit = safe(async e => {
     e.preventDefault();
-    const { id } = await api('/api/cars', { method: 'POST', body: formData(form) });
+    const { id } = await api('/api/cars', { method: 'POST', body: carBody(formData(form)) });
     store.set('garage.car', id); location.hash = `#/car/${id}/maintenance`;
   });
 }

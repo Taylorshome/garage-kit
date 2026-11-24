@@ -16,7 +16,7 @@ test('monthsAgo: whole months clamp month ends, fractions count days', () => {
 
 test('dated answers: date only (miles null) when miles/month is unknown', () => {
   const e = estimateFor('6mo', { today, mileage: 120000, mpm: null });
-  assert.deepEqual(e, { last_done_date: '2026-05-24', last_done_miles: null, last_done_estimated: 1, due_now: 0 });
+  assert.deepEqual(e, { last_done_date: '2026-05-24', last_done_miles: null, last_done_hours: null, last_done_estimated: 1, due_now: 0 });
 });
 
 test('dated answers: miles from miles/month, rounded to 100, never negative', () => {
@@ -27,7 +27,7 @@ test('dated answers: miles from miles/month, rounded to 100, never negative', ()
 });
 
 test("Don't remember: nothing set, reviewed; Never: due now", () => {
-  assert.deepEqual(estimateFor('unknown', { today, mileage: 1 }), { last_done_date: null, last_done_miles: null, last_done_estimated: 0, due_now: null });
+  assert.deepEqual(estimateFor('unknown', { today, mileage: 1 }), { last_done_date: null, last_done_miles: null, last_done_hours: null, last_done_estimated: 0, due_now: null });
   assert.equal(estimateFor('never', { today }).due_now, 1);
   assert.throws(() => estimateFor('yesterday', { today }), /Unknown answer/);
   assert.equal(Object.keys(ANSWERS).length, 7);

@@ -46,7 +46,8 @@ export async function claimNext(env) {
   const { text } = await carContext(env, job.car_id, { query: [{ text: t.title, weight: 1 }, { text: t.notes || '', weight: 0.6 }], budget: JOB_RESEARCH_BUDGET });
   return {
     job: { id: job.id, attempt: job.attempts + 1 },
-    car: { id: car.id, nickname: car.nickname, year: car.year, make: car.make, model: car.model, trim: car.trim, engine: car.engine, transmission: car.transmission, vin: car.vin, mileage: car.mileage },
+    car: { id: car.id, nickname: car.nickname, year: car.year, make: car.make, model: car.model, trim: car.trim, engine: car.engine, transmission: car.transmission, vin: car.vin, mileage: car.mileage,
+      vehicle_type: car.vehicle_type || 'car', hours: car.hours ?? null },
     todo: { id: t.id, type: t.type || 'todo', title: t.title, notes: t.notes, priority: t.priority, reporter: t.reporter, mileage: t.mileage, symptom: sym, created_at: t.created_at, quick_checks: t.ai_status === 'done' ? t.ai_note : null },
     context: text,
     url: `#/car/${car.id}/todo`,

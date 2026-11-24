@@ -5,6 +5,8 @@
 // of its class (length, wheelbase, width, height, track, tire size). Lights, grilles, trim and seams are "decals":
 // outlines projected onto the body by ray casting, so they sit on the surface. All of it is original code; nothing
 // is copied from photos or someone else's model files.
+// Motorcycles, side-by-sides and ATVs are built in vehicles3d.js (same conventions).
+import { VEHICLE_SPECS } from './vehicles3d.js';
 export const THREE_URL = '/vendor/three-0.160.0/three.module.min.js';
 let T = null;
 export async function loadThree() { if (!T) T = await import(THREE_URL); return T; }
@@ -315,11 +317,25 @@ export const SPECS = { sedan: SEDAN, coupe: COUPE, hatchback: HATCHBACK, minivan
 export const BODY_STYLES = Object.keys(SPECS);
 const STYLE_ALIASES = { van: 'minivan', truck: 'pickup', crossover: 'suv', wagon: 'hatchback', hatch: 'hatchback', convertible: 'coupe' };
 
-/** Which procedural body style to show for a car row (by body_type; unknown -> sedan). */
+/** Which procedural model to show for a vehicle row (by body_type, then vehicle_type and make/model; unknown car -> sedan). */
 export function specFor(car) {
-  const t = String(car?.body_type || '').toLowerCase().trim();
-  return SPECS[t] || SPECS[STYLE_ALIASES[t]] || SEDAN;
+  const t = String(car?.body_type || '').toLowerCase().trim(), vt = String(car?.vehicle_type || '').toLowerCase();
+  const V = VEHICLE_SPECS;
+  if (V[t]) return V[t];
+  const powersport = vt === 'motorcycle' || vt === 'utv' || vt === 'atv';
+  if (!powersport) return SPECS[t] || SPECS[STYLE_ALIASES[t]] || SPECS[STYLE_ALIASES[vt]] || SEDAN;
+  // powersports row without a known body style: loose make/model match, then the type's default
+  const s = `${car.make || ''} ${car.model || ''}`.toLowerCase();
+  if (/v ?star|vulcan|shadow|rebel|sportster|softail|boulevard|dyna|fat ?boy|road king|street glide|bobber|scout|chief|intruder|virago/.test(s)) return V.cruiser;
+  if (/rzr|maverick|talon|\bx3\b|wolverine|ranger|pioneer|teryx|commander|general|defender|viking|zforce|side.?by.?side/.test(s)) return V.utv;
+  if (/grizzly|sportsman|foreman|rancher|outlander|kodiak|brute force|kingquad|recon|rubicon|scrambler|raptor|banshee|\batv\b/.test(s)) return V.atv;
+  if (/ninja|\bcbr|\byzf|\br[16]\b|gsx-?r|panigale|zx-?\d|daytona|\bfz-?\d|\bmt-?\d/.test(s)) return V.sport;
+  if (/\bklr|\bdrz?\b|dr-?z?\d{3}|\bxr\d|crf\d+l|\bwr\d|ktm|africa twin|t[eé]n[eé]r[eé]|v-?strom|\bxt\d{3}/.test(s)) return V.dualsport;
+  if (/vespa|scooter|ruckus|\bpcx|zuma|burgman|metropolitan|\bxmax|\bnmax/.test(s)) return V.scooter;
+  return vt === 'utv' ? V.utv : vt === 'atv' ? V.atv : V.cruiser;
 }
+/** Camera distance that frames a spec (cars unchanged; small vehicles may frame tighter via S.minDist). */
+const frameDist = S => Math.max(S.minDist ?? 7.6, S.L * 1.55);
 
 // ---------------------------------------------------------------- 2D helpers for decal outlines
 function circle(cu, cv, r, n) { return Array.from({ length: n }, (_, i) => [cu + r * Math.cos((i / n) * Math.PI * 2), cv + r * Math.sin((i / n) * Math.PI * 2)]); }
@@ -791,6 +807,12 @@ function geometryFor(S) {
 /** Build a car Object3D (origin centred under the car, front facing +x). */
 export function createCar(S, color, onReady) {
   const mats = makeMaterials(color || S.defaultColor, S);
+  if (S.build) { // procedural bikes / UTV / ATV (vehicles3d.js)
+    const pivot = new T.Group();
+    pivot.add(S.build(T, mats));
+    pivot.userData = { spec: S, mats, length: S.L, setColor: c => { mats.paint.color.set(c); Object.assign(mats.paint, paintParams(c)); mats.line.color.set(c); } };
+    return pivot;
+  }
   const pivot = new T.Group();
   pivot.add(proceduralCar(S, mats));
   pivot.userData = { spec: S, mats, length: S.L, setColor: c => { mats.paint.color.set(c); Object.assign(mats.paint, paintParams(c)); mats.line.color.set(c); } };
@@ -1008,7 +1030,7 @@ export class CarViewer {
     // narrow/portrait frames need the camera further back to fit the car's length
     // the vertical FOV spans the whole canvas, so a smaller focus box needs the camera further back by h/fh
     this.aspectBoost = Math.max(1, 1.55 / Math.max(0.5, fw / fh)) * (this.focusEl ? Math.max(1, (h / fh) * 0.8) : 1);
-    if (this.spec) this.targetDist = Math.max(7.6, this.spec.L * 1.55) * this.aspectBoost;
+    if (this.spec) this.targetDist = frameDist(this.spec) * this.aspectBoost;
     this.kick();
   }
   /** Show a car; dir = +1 slides in from the right, -1 from the left, 0 = instant. */
@@ -1029,7 +1051,7 @@ export class CarViewer {
     this.current = next;
     this.spec = S;
     this.pivot.add(next);
-    this.targetDist = Math.max(7.6, S.L * 1.55) * (this.aspectBoost || 1);
+    this.targetDist = frameDist(S) * (this.aspectBoost || 1);
     if (this.focusEl) this.resize();
     if (this.dist == null) this.dist = this.targetDist;
     if (prev && dir) {
@@ -1066,7 +1088,7 @@ export class CarViewer {
     this.anims = this.anims.filter(a => !a(t));
     this.dist += (this.targetDist - this.dist) * Math.min(1, dt * 4);
     this.scene.fog.near = this.dist + 3; this.scene.fog.far = this.dist + 18;
-    const d = this.dist, look = new T.Vector3(0, 0.75, 0);
+    const d = this.dist, look = new T.Vector3(0, this.spec?.lookY ?? 0.75, 0);
     this.camera.position.set(Math.sin(this.az) * Math.cos(this.el2) * d, look.y + Math.sin(this.el2) * d, Math.cos(this.az) * Math.cos(this.el2) * d);
     this.camera.lookAt(look);
     this.renderer.render(this.scene, this.camera);

@@ -4,7 +4,7 @@
 # Upgrades: docker compose pull && docker compose up -d   (migrations run automatically, with a backup first)
 services:
   garage:
-    image: ghcr.io/taylorshome/garage-kit:0.1      # or :latest; pin a version to upgrade on your schedule
+    image: ghcr.io/taylorshome/garage-kit:0.2      # or :latest; pin a version to upgrade on your schedule
     container_name: garage-kit
     restart: unless-stopped
     ports:

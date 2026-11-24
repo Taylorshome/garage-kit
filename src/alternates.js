@@ -2,8 +2,9 @@
 // with "avoid" brands kept separate. Built from the brand research (brands table) plus parts-list part numbers
 // for parts the brand research doesn't cover. Shared by GET /api/cars/:id/alternates and MCP get_alternates.
 import { brandsForCar, pickedOption, priceOf } from './shopping.js';
+import { partsSources } from './vehicle.js';
 
-const isRA = o => /rockauto/i.test(String(o.where || ''));
+let isRA = o => /rockauto/i.test(String(o.where || ''));
 const isAvoid = o => /avoid|overpriced/i.test(String(o.verdict || ''));
 const VERDICT_RANK = v => /best value/i.test(v) ? 0 : /best quality/i.test(v) ? 1 : /budget/i.test(v) ? 2 : 3;
 const UNSURE = /verify|unverified|unconfirmed|not verif|check fit/i;
@@ -19,10 +20,11 @@ const slim = (o, extra = {}) => ({
 });
 
 /** One brand-research part -> alternates entry. Pure; tested in test/alternates.test.mjs. */
-export function alternatesFor(b) {
+export function alternatesFor(b, re = /rockauto/i) {
+  isRA = o => re.test(String(o.where || ''));
   const opts = b.options || [];
   const good = opts.filter(o => !isAvoid(o));
-  const picked = pickedOption(b);
+  const picked = pickedOption(b, re);
   const first = good.find(o => o.tier === 'oem') || picked || good[0] || null;
   const alts = good.filter(o => o !== first)
     .sort((x, y) => (isRA(y) ? 1 : 0) - (isRA(x) ? 1 : 0) || VERDICT_RANK(x.verdict || '') - VERDICT_RANK(y.verdict || ''));
@@ -44,26 +46,30 @@ export function alternatesFor(b) {
 function fromPartsList(p) {
   const pns = (p.part_numbers || []).filter(x => x && x.number);
   if (!pns.length) return null;
-  const row = x => ({ brand: x.brand || '?', part_number: x.number, tier: /gm|acdelco|mopar|genuine|oem/i.test(x.brand || '') ? 'oem' : null, price_usd: null, where: null, verdict: null, verify_fitment: UNSURE.test(`${x.number} ${p.notes || ''}`), sources: [] });
-  const oem = pns.findIndex(x => /gm|acdelco|mopar|genuine|oem/i.test(x.brand || ''));
+  const OEM = /gm|acdelco|mopar|genuine|oem|yamaha|honda|kawasaki|suzuki|polaris|can-?am|brp|harley/i;
+  const row = x => ({ brand: x.brand || '?', part_number: x.number, tier: OEM.test(x.brand || '') ? 'oem' : null, price_usd: null, where: null, verdict: null, verify_fitment: UNSURE.test(`${x.number} ${p.notes || ''}`), sources: [] });
+  const oem = pns.findIndex(x => OEM.test(x.brand || ''));
   const fi = oem >= 0 ? oem : 0;
   return { part: p.name, category: p.category || null, pick: null, first_choice: { ...row(pns[fi]), is_oem: oem >= 0, is_pick: false },
     alternates: pns.filter((_, i) => i !== fi).map(row), avoid: [], no_alternate: pns.length < 2, from_parts_list: true };
 }
 
-export async function alternatesForCar(env, carId) {
+export async function alternatesForCar(env, carId, car = null) {
+  car = car || await env.DB.prepare('SELECT id, vehicle_type, body_type FROM cars WHERE id = ?1').bind(carId).first();
+  const src = partsSources(car || {});
   const [br, pg] = await Promise.all([
-    brandsForCar(env, carId),
+    brandsForCar(env, carId, src.re),
     env.DB.prepare('SELECT data FROM parts_guides WHERE car_id = ?1').bind(carId).first(),
   ]);
   const covered = new Set(br.parts.map(b => b.matched_part).filter(Boolean));
-  const list = br.parts.filter(b => (b.options || []).length || (b.avoid || []).length).map(alternatesFor);
+  const list = br.parts.filter(b => (b.options || []).length || (b.avoid || []).length).map(b => alternatesFor(b, src.re));
   if (pg) for (const p of JSON.parse(pg.data).parts || []) if (!covered.has(p.name)) { const e = fromPartsList(p); if (e) list.push(e); }
   const spec = br.parts.filter(b => !(b.options || []).length && !(b.avoid || []).length).map(b => b.part);   // e.g. lug nut torque: a spec, not a part
   return {
     as_of: br.meta?.as_of || br.meta?.researched || br.meta?.compiled || null,
     parts: list, spec_only: spec,
     counts: { parts: list.length, with_alternates: list.filter(x => !x.no_alternate).length, no_alternate: list.filter(x => x.no_alternate).map(x => x.part) },
-    note: 'first_choice = the OEM part when researched, else the pick. alternates are the non-avoid brands, RockAuto first. verify_fitment = not confirmed for this exact vehicle and engine: check by VIN before buying. Prices are approximate (research date).',
+    preferred_store: src.online,
+    note: `first_choice = the OEM part when researched, else the pick. alternates are the non-avoid brands, ${src.online} first. verify_fitment = not confirmed for this exact vehicle and engine: check by VIN before buying. Prices are approximate (research date).`,
   };
 }

@@ -44,7 +44,8 @@ fetches the text from the garage when one arrives.
 
 What gets sent (also listed in Settings -> Notifications):
 - due / overdue maintenance at `notify_hour` local time (each item at most once a week unless its status changes);
-- on the 1st of the month, a mileage check per car (tap -> that car's odometer box); `mileage_check: false` turns it off;
+- on the 1st of the month, a mileage check per vehicle (tap -> its odometer box; UTVs and ATVs are asked for their
+  engine hours instead, tap -> the hours box); `mileage_check: false` turns it off;
 - research results and research failures (once);
 - receipts that arrived by email (once each);
 - health alerts from the optional health check.
@@ -81,7 +82,7 @@ internet**: a Nabu Casa Remote UI URL (`https://xxxx.ui.nabu.casa`) or your own 
    items due; attributes `overdue`, `due_soon`, `open_todos`, `url`) refreshed daily.
 
 **Reply with the mileage right in the notification** (optional): the monthly check then carries an "Enter mileage"
-text box. `npm run secrets -- --ha-mileage-token` creates the token (copy it from `.ha-mileage-token` into HA's
+text box ("Enter hours" for UTVs / ATVs, action `GARAGE_HR_<id>`). `npm run secrets -- --ha-mileage-token` creates the token (copy it from `.ha-mileage-token` into HA's
 `secrets.yaml` as `garage_mileage_token`, then delete the file), deploy, and add to HA's `configuration.yaml`:
 
 ```yaml
@@ -100,7 +101,7 @@ automation:
       - platform: event
         event_type: mobile_app_notification_action
     condition:
-      - "{{ trigger.event.data.action is string and trigger.event.data.action.startswith('GARAGE_MI_') }}"
+      - "{{ trigger.event.data.action is string and (trigger.event.data.action.startswith('GARAGE_MI_') or trigger.event.data.action.startswith('GARAGE_HR_')) }}"
     action:
       - service: rest_command.garage_mileage
         data:
@@ -108,7 +109,9 @@ automation:
           reply: "{{ trigger.event.data.reply_text }}"
 ```
 The garage accepts numbers only (commas, spaces and "mi" are fine), never lower than the current reading and at most
-5,000 above it, and sends a confirmation back through HA.
+5,000 above it, and sends a confirmation back through HA. Hours replies (`GARAGE_HR_`): one decimal ("145.5", "145 h"),
+never lower, at most 300 h above the last reading. If you set this up before 0.2.0, update the automation's condition
+to the one above so hours replies reach the garage.
 
 Polling instead (a REST sensor in HA): `npx wrangler secret put HA_POLL_TOKEN` (any long random string), then
 `GET https://YOUR-GARAGE/api/due` with `Authorization: Bearer <that string>`.

@@ -1,0 +1,434 @@
+{
+ "_about": "DEMO DATA: a side-by-side (UTV) for local testing and screenshots (scripts/seed-demo.mjs --utv). The starter schedule is the kit's UTV schedule (src/vehicle.js, from the 2024 Polaris RZR XP 1000 owner's manual chart: miles, engine hours or months, whichever comes first); the CVT-belt and overheating diagnosis plans are built in for every UTV (src/generic-plans.js). schedule_research below is the research behind those schedules. Not anyone's real machine.",
+ "car": {
+  "nickname": "RZR",
+  "year": 2020,
+  "make": "Polaris",
+  "model": "RZR XP 1000",
+  "vehicle_type": "utv",
+  "body_type": "utv",
+  "color": "#c8102e",
+  "mileage": 1830,
+  "hours": 142.5,
+  "attrs": {
+   "cooling": "liquid",
+   "fuel_system": "efi",
+   "clutch": "cvt"
+  },
+  "notes": "Demo side-by-side: a made-up 2020 Polaris RZR XP 1000 with a little history (no VIN). Serviced by engine hours."
+ },
+ "starter_schedule": true,
+ "todos": [
+  {
+   "title": "Burning belt smell and slipping after a muddy ride",
+   "notes": "Revs up but doesn't pull on hills since crossing a deep creek. Smells like burnt rubber.",
+   "priority": "high",
+   "symptom": true
+  }
+ ],
+ "schedule_research": {
+  "compiled": "2026-11-24",
+  "notes": "Starter schedules, not model-exact. UTV list = 2024 Polaris RZR XP 1000 owner's manual maintenance schedule (sport side-by-side; whichever of hours/miles/months comes first; break-in items once at 25 h / 1 mo / 500 mi). ATV list = 2022 Polaris Sportsman 570 Touring/X2/6x6 owner's manual maintenance chart. Can-Am Maverick X3 numbers (aftermarket summaries, unverified against the BRP guide) run longer: oil and belt/pulley inspection about 100 h / 12 mo. Severe use (frequent mud, water or sand, constant high RPM, prolonged low-speed heavy loads, extended idling, short cold trips): Polaris says service at 50% of the stated interval; the 'severe' field gives that halved value. Mud/water crossings: check the front diff, rear diff/transmission/gearcase, the CVT housing (drain plug) and the air box for water after every deep crossing; milky or creamy fluid means water got in: change it now. (The Polaris immersion page covers air box, spark plugs, fuse box and PVT drying; the 'milky = change now' rule is general practice, verify for your machine.) Items marked 'verify' have no manual source here. Tire age and battery are date-only.",
+  "utv": [
+   {
+    "item": "Engine oil + filter (break-in)",
+    "interval_miles": 500,
+    "interval_hours": 25,
+    "interval_months": 1,
+    "severe": null,
+    "notes": "One-time break-in change.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000883575"
+   },
+   {
+    "item": "Engine oil + filter",
+    "interval_miles": 1000,
+    "interval_hours": 50,
+    "interval_months": 12,
+    "severe": "25 h / 500 mi / 6 mo",
+    "notes": "RZR XP 1000. Can-Am Maverick X3 is about 100 h / 12 mo per aftermarket guides (verify).",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000883575"
+   },
+   {
+    "item": "CVT drive belt inspect/clean",
+    "interval_miles": 1000,
+    "interval_hours": 50,
+    "interval_months": 12,
+    "severe": "25 h / 500 mi / 6 mo",
+    "notes": "Also at break-in (25 h). Look for glazing, hourglassing, cords, missing cogs; measure width vs spec.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000883575"
+   },
+   {
+    "item": "CVT drive belt replace",
+    "interval_miles": null,
+    "interval_hours": null,
+    "interval_months": null,
+    "severe": null,
+    "notes": "No fixed OEM interval: replace on inspection (wear, width under limit, damage). Many owners carry a spare. Typical life figures are forum lore: verify.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000792067"
+   },
+   {
+    "item": "CVT clutches clean/inspect (weights, rollers, bushings, buttons)",
+    "interval_miles": 1000,
+    "interval_hours": 50,
+    "interval_months": 12,
+    "severe": "25 h / 500 mi / 6 mo",
+    "notes": "Also at break-in. Dealer item on many machines.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000883575"
+   },
+   {
+    "item": "Air filter inspect/clean, ducts and screens",
+    "interval_miles": 500,
+    "interval_hours": 25,
+    "interval_months": 6,
+    "severe": "Every ride in dust",
+    "notes": "Dust dependent: check far more often in dust. Replace as needed.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000883575"
+   },
+   {
+    "item": "Air intake / CVT pre-filter",
+    "interval_miles": null,
+    "interval_hours": null,
+    "interval_months": null,
+    "severe": "Every ride",
+    "notes": "RZR schedule covers it under air filter ducts and screens; Sportsman chart says daily. Use pre-ride.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Front diff / front gearcase fluid change",
+    "interval_miles": 1000,
+    "interval_hours": 50,
+    "interval_months": 12,
+    "severe": "25 h / 500 mi / 6 mo",
+    "notes": "Also changed at break-in (25 h).",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000883575"
+   },
+   {
+    "item": "Transmission / rear gearcase fluid change",
+    "interval_miles": 1000,
+    "interval_hours": 50,
+    "interval_months": 12,
+    "severe": "25 h / 500 mi / 6 mo",
+    "notes": "Level check at break-in. On RZR the transmission and rear gearcase are one unit; machines with a separate rear diff list it separately.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000883575"
+   },
+   {
+    "item": "Coolant level/leaks check; radiator clean",
+    "interval_miles": 1000,
+    "interval_hours": 50,
+    "interval_months": 12,
+    "severe": "Every ride in mud",
+    "notes": "Check strength seasonally; pressure test yearly. Clean radiator with a garden hose, not a pressure washer.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000883575"
+   },
+   {
+    "item": "Coolant change",
+    "interval_miles": 5000,
+    "interval_hours": null,
+    "interval_months": 60,
+    "severe": null,
+    "notes": "RZR XP 1000: 5,000 mi / 60 mo.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000883575"
+   },
+   {
+    "item": "Grease fittings: A-arms, ball joints, prop shaft U-joints/carrier bearing; general lubrication",
+    "interval_miles": 500,
+    "interval_hours": 25,
+    "interval_months": 6,
+    "severe": "After every wash or mud ride (verify)",
+    "notes": "Polaris 'general lubrication'. At 50 h also check suspension bushings and ball joints, shocks for leaks. Prop shaft not listed separately in the RZR schedule.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000883575"
+   },
+   {
+    "item": "CV boots inspect",
+    "interval_miles": null,
+    "interval_hours": null,
+    "interval_months": null,
+    "severe": "Every ride",
+    "notes": "No interval in the RZR schedule; Sportsman lists CV boots in the pre-ride inspection. A torn boot lets mud into the joint: replace the boot quickly.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Spark plug inspect",
+    "interval_miles": 1000,
+    "interval_hours": 50,
+    "interval_months": 12,
+    "severe": "25 h / 500 mi / 6 mo",
+    "notes": "Replace as needed.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000883575"
+   },
+   {
+    "item": "Brake fluid change and bleed",
+    "interval_miles": 2000,
+    "interval_hours": null,
+    "interval_months": 24,
+    "severe": null,
+    "notes": "",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000883575"
+   },
+   {
+    "item": "Brake pads and hoses inspect",
+    "interval_miles": 500,
+    "interval_hours": 25,
+    "interval_months": 6,
+    "severe": "Every ride in mud/sand",
+    "notes": "Initial inspection at break-in.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000883575"
+   },
+   {
+    "item": "Winch inspect: cable/rope, hook, fairlead, mounting bolts, wiring",
+    "interval_miles": null,
+    "interval_hours": null,
+    "interval_months": null,
+    "severe": "After every hard pull",
+    "notes": "No interval in the RZR schedule; the Sportsman chart marks it severe-use with no interval. Check before each use (verify against the winch maker's manual).",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Battery: test, clean terminals, tend in storage",
+    "interval_miles": null,
+    "interval_hours": null,
+    "interval_months": 6,
+    "severe": null,
+    "notes": "Date only. RZR: test/clean at every 25 h / 6 mo service. Keep on a tender when stored.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000883575"
+   },
+   {
+    "item": "Tire age",
+    "interval_miles": null,
+    "interval_hours": null,
+    "interval_months": 72,
+    "severe": null,
+    "notes": "Date only: replace around 5-6 years from the DOT date code even if tread remains (general tire guidance, not from these manuals: verify).",
+    "source": null
+   }
+  ],
+  "atv": [
+   {
+    "item": "Engine oil + filter (break-in)",
+    "interval_miles": null,
+    "interval_hours": 25,
+    "interval_months": 1,
+    "severe": null,
+    "notes": "One-time break-in change.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Engine oil + filter",
+    "interval_miles": 1000,
+    "interval_hours": 100,
+    "interval_months": 6,
+    "severe": "50 h / 500 mi / 3 mo (50%)",
+    "notes": "Sportsman 570.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "CVT drive belt inspect",
+    "interval_miles": 500,
+    "interval_hours": 50,
+    "interval_months": 6,
+    "severe": "25 h / 250 mi / 3 mo",
+    "notes": "Replace as needed.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "CVT drive belt replace",
+    "interval_miles": null,
+    "interval_hours": null,
+    "interval_months": null,
+    "severe": null,
+    "notes": "On inspection only; no fixed interval.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000867967.xml/$/0000346592"
+   },
+   {
+    "item": "CVT clutches clean/inspect",
+    "interval_miles": 1000,
+    "interval_hours": 100,
+    "interval_months": 12,
+    "severe": "50 h / 500 mi / 6 mo",
+    "notes": "Dealer item.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Air filter pre-filter",
+    "interval_miles": null,
+    "interval_hours": null,
+    "interval_months": null,
+    "severe": "Every ride",
+    "notes": "Daily: inspect, clean often.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Air filter main element",
+    "interval_miles": 500,
+    "interval_hours": 50,
+    "interval_months": 6,
+    "severe": "Every ride in dust",
+    "notes": "Inspect; replace as needed.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Front diff / front gearcase fluid (break-in)",
+    "interval_miles": 250,
+    "interval_hours": 25,
+    "interval_months": 1,
+    "severe": null,
+    "notes": "One-time.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Front diff / front gearcase fluid change",
+    "interval_miles": 2000,
+    "interval_hours": 200,
+    "interval_months": 24,
+    "severe": "100 h / 1000 mi / 12 mo",
+    "notes": "",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Transmission fluid change",
+    "interval_miles": 2000,
+    "interval_hours": 200,
+    "interval_months": 24,
+    "severe": "100 h / 1000 mi / 12 mo",
+    "notes": "Level check at break-in (25 h).",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Rear gearcase / final drive fluid change",
+    "interval_miles": 2000,
+    "interval_hours": 200,
+    "interval_months": 24,
+    "severe": "100 h / 1000 mi / 12 mo",
+    "notes": "Level check at break-in. Yamaha Grizzly: check final gear case for leaks before each ride.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Coolant change",
+    "interval_miles": null,
+    "interval_hours": null,
+    "interval_months": 60,
+    "severe": "24 mo",
+    "notes": "Check level daily. The chart gives both 'every two years' and 60 months; use 24 mo if unsure.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Grease fittings / general lubrication (A-arms, pivots, cables)",
+    "interval_miles": 500,
+    "interval_hours": 50,
+    "interval_months": 3,
+    "severe": "25 h / 250 mi",
+    "notes": "Suspension lube 50 h / 6 mo; steering 50 h / 6 mo (dealer).",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "CV boots inspect",
+    "interval_miles": null,
+    "interval_hours": null,
+    "interval_months": null,
+    "severe": "Every ride",
+    "notes": "Pre-ride inspection item.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Spark plug inspect",
+    "interval_miles": 1000,
+    "interval_hours": 100,
+    "interval_months": 12,
+    "severe": "50 h / 500 mi / 6 mo",
+    "notes": "Replace as needed.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Brake fluid change",
+    "interval_miles": 2000,
+    "interval_hours": 200,
+    "interval_months": 24,
+    "severe": null,
+    "notes": "",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Brake pads inspect",
+    "interval_miles": 100,
+    "interval_hours": 10,
+    "interval_months": 1,
+    "severe": "More often",
+    "notes": "",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Winch inspect: cable/rope, hook, mounting",
+    "interval_miles": null,
+    "interval_hours": null,
+    "interval_months": null,
+    "severe": "After every hard pull",
+    "notes": "Severe-use item with no interval. Check before each use (verify).",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Battery: terminals, clean, test, tend in storage",
+    "interval_miles": 200,
+    "interval_hours": 20,
+    "interval_months": 1,
+    "severe": null,
+    "notes": "Date only in the app: monthly check.",
+    "source": "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705"
+   },
+   {
+    "item": "Tire age",
+    "interval_miles": null,
+    "interval_hours": null,
+    "interval_months": 72,
+    "severe": null,
+    "notes": "Date only: about 5-6 years from the DOT date code (general guidance, verify).",
+    "source": null
+   }
+  ],
+  "examples": [
+   {
+    "model": "Polaris RZR XP 1000 (2024)",
+    "type": "utv",
+    "engine_oil": "Polaris PS-4 5W-50 (-35 to 100 F) or PS-4 Extreme 0W-50 (-45 to 130 F)",
+    "oil_capacity": "2.5 qt (2.4 L)",
+    "other_capacities": "Front gearcase 10.1-11.8 oz (300-350 ml); transmission 55.8 oz (1650 ml); coolant 5.44 qt (5.1 L); fuel 9.5 gal (36 L)",
+    "sources": [
+     "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000871042",
+     "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000846960",
+     "https://cdn1.polaris.com/globalassets/lubricants/oil-change-instructions/rzr-xp-1000-oil-change.pdf?v=4bd3f7b9"
+    ]
+   },
+   {
+    "model": "Yamaha Grizzly 700 4x4 (2008)",
+    "type": "atv",
+    "engine_oil": "Viscosity not confirmed (10W-40 commonly cited: verify in the manual's Recommended oil section)",
+    "oil_capacity": "2.10 L (2.22 US qt) with filter cartridge replacement",
+    "other_capacities": "Final gear oil SAE 80 API GL-4 hypoid, 0.20 L (0.21 US qt); differential capacity not found (verify)",
+    "sources": [
+     "https://manualowl.com/am/Yamaha%20Motorsports/2008-Grizzly%20700%204x4%20EPS/Manual/10856?page=119"
+    ]
+   },
+   {
+    "model": "Can-Am Maverick X3 (recent)",
+    "type": "utv",
+    "engine_oil": "BRP XPS 5W-40 synthetic blend (per aftermarket guide: verify in the BRP operator's guide)",
+    "oil_capacity": "Not found (verify)",
+    "other_capacities": "Belt/pulley inspection about 100 h / 12 mo / 2,000 mi; halve for mud, water, sand or racing (aftermarket summary, verify)",
+    "sources": [
+     "https://www.superatv.com/offroad-atlas/simplified-can-am-maintenance-schedules-for-everyday-use",
+     "https://everythingcanamoffroad.com/ecc-blog/simplified-canam-maintenance-schedules-for-everyday-use"
+    ]
+   }
+  ],
+  "sources": [
+   "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000883575",
+   "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000846960",
+   "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000871042",
+   "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000865008",
+   "https://publications.polaris.com/owner/owners-manuals/0000881301.xml/$/0000792067",
+   "https://publications.polaris.com/owner/owners-manuals/0000744042.xml/$/0000747705",
+   "https://publications.polaris.com/owner/owners-manuals/0000867967.xml/$/0000346592",
+   "https://manualowl.com/am/Yamaha%20Motorsports/2008-Grizzly%20700%204x4%20EPS/Manual/10856?page=119",
+   "https://www.superatv.com/offroad-atlas/simplified-can-am-maintenance-schedules-for-everyday-use"
+  ]
+ }
+}

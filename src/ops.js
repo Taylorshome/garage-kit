@@ -5,11 +5,12 @@ import { logAnswer, robustAnswer } from './answer.js';
 import { carContext, systemPrompt } from './mechanic.js';
 import { HttpError, date, int, newId, nowSec, sha256Hex, str, todayLocal } from './util.js';
 import { queueJob } from './research-jobs.js';
-import { logMileage } from './mileage.js';
+import { logHours, logMileage } from './mileage.js';
+import { typeOf } from './vehicle.js';
 
 export const KINDS = { noise: 'Noise', smell: 'Smell', leak: 'Leak', warning_light: 'Warning light', handling: 'Drives / handles weird', no_start: "Won't start", other: 'Other' };
 export const WHENS = { cold_start: 'Cold start', warm: 'Warmed up', idle: 'Idle', accelerating: 'Accelerating', braking: 'Braking', turning: 'Turning', highway: 'Highway', bumps: 'Over bumps', always: 'All the time' };
-export const WHERES = { front: 'Front', back: 'Back', left: 'Left', right: 'Right', under_hood: 'Under the hood', inside: 'Inside the car' };
+export const WHERES = { front: 'Front', back: 'Back', left: 'Left', right: 'Right', under_hood: 'Under the hood / engine', inside: 'Inside / cab' };
 const PRIORITIES = ['high', 'medium', 'low'];
 
 /** Accept keys or labels, single value or list; return known keys only. */
@@ -26,11 +27,17 @@ function pick(v, dict) {
 const normText = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 // ---------- cars ----------
-const ALIASES = { truck: 'pickup', pickup: 'pickup', minivan: 'minivan', van: 'minivan', sedan: 'sedan', car: 'sedan', suv: 'suv', crossover: 'suv', coupe: 'coupe', hatch: 'hatchback', hatchback: 'hatchback' };
-/** Car by id or nickname (nickname, model, "the truck"), case-insensitive and forgiving. */
+// loose words -> vehicle type ("the truck", "the bike", "the side by side") or body style ("the coupe")
+const ALIASES = { truck: 'truck', pickup: 'truck', minivan: 'van', van: 'van', sedan: 'car', car: 'car', suv: 'suv', crossover: 'suv',
+  bike: 'motorcycle', motorcycle: 'motorcycle', motorbike: 'motorcycle', moto: 'motorcycle', cruiser: 'motorcycle', scooter: 'motorcycle',
+  utv: 'utv', sxs: 'utv', rzr: 'utv', atv: 'atv', quad: 'atv', 'four wheeler': 'atv', 'side by side': 'utv' };
+const BODY_ALIASES = { coupe: 'coupe', hatch: 'hatchback', hatchback: 'hatchback', wagon: 'wagon' };
+const compact = s => normText(s).replace(/\s+/g, '');
+/** Vehicle by id or nickname ("civic", "the truck", "the bike", "vstar", "the side by side"), case-insensitive and forgiving. */
 export async function resolveCar(env, ref) {
-  const s = normText(ref).replace(/^(the|my|our)\s+/, '').replace(/\bchevy\b/g, 'chevrolet');
-  if (!s) throw new HttpError(400, 'Which car? Pass its nickname or model.');
+  let s = normText(ref).replace(/^(the|my|our)\s+/, '').replace(/\bchevy\b/g, 'chevrolet');
+  for (const [k, v] of [['side by side', 'utv'], ['four wheeler', 'atv'], ['sxs', 'utv']]) s = s.replace(k, v);
+  if (!s) throw new HttpError(400, 'Which vehicle? Pass its nickname or model (or "the truck", "the bike").');
   const { results: cars } = await env.DB.prepare('SELECT * FROM cars WHERE archived = 0').all();
   const byId = cars.find(c => c.id === String(ref).trim());
   if (byId) return byId;
@@ -38,18 +45,22 @@ export async function resolveCar(env, ref) {
     const hay = normText(`${c.nickname} ${c.make} ${c.model} ${c.year} ${c.trim || ''}`);
     if (normText(c.nickname) === s) return 100;
     if (normText(c.model) === s) return 90;
+    const hayC = compact(`${c.nickname} ${c.make} ${c.model}`);
     let sc = 0;
     for (const w of s.split(' ')) {
       if (!w) continue;
       if (hay.split(' ').includes(w)) sc += 10;
       else if (hay.includes(w)) sc += 5;
-      if (ALIASES[w] && c.body_type === ALIASES[w]) sc += 8;
+      else if (w.length >= 4 && hayC.includes(w)) sc += 7;    // "vstar" -> "V Star 650"
+      if (ALIASES[w] && typeOf(c) === ALIASES[w]) sc += 8;
+      else if (BODY_ALIASES[w] && c.body_type === BODY_ALIASES[w]) sc += 8;
     }
+    if (sc === 0 && s.length >= 4 && hayC.includes(s.replace(/\s+/g, ''))) sc = 7;
     return sc;
   };
   const ranked = cars.map(c => [score(c), c]).filter(([n]) => n > 0).sort((a, b) => b[0] - a[0]);
   if (!ranked.length || (ranked[1] && ranked[1][0] === ranked[0][0])) {
-    throw new HttpError(400, `Couldn't tell which car "${ref}" means. Cars: ${cars.map(c => `${c.nickname} (${c.year} ${c.make} ${c.model})`).join('; ')}`);
+    throw new HttpError(400, `Couldn't tell which vehicle "${ref}" means. Vehicles: ${cars.map(c => `${c.nickname} (${c.year} ${c.make} ${c.model})`).join('; ')}`);
   }
   return ranked[0][1];
 }
@@ -60,6 +71,22 @@ export async function setMileage(env, carId, miles, source = 'web') {
   await env.DB.prepare('UPDATE cars SET mileage = ?1, mileage_updated_at = ?2, updated_at = ?3 WHERE id = ?4').bind(m, todayLocal(), nowSec(), carId).run();
   await logMileage(env, carId, m, source);
   return m;
+}
+
+/** Set the engine hours (UTVs / ATVs; any vehicle with an hour meter). Logged like mileage. */
+export async function setHours(env, carId, hours, source = 'web') {
+  const h = hoursNum(hours);
+  if (h == null) throw new HttpError(400, 'Hours are required');
+  await env.DB.prepare('UPDATE cars SET hours = ?1, hours_updated_at = ?2, updated_at = ?3 WHERE id = ?4').bind(h, todayLocal(), nowSec(), carId).run();
+  await logHours(env, carId, h, source);
+  return h;
+}
+/** Engine hours: a number 0-100,000 with one decimal ("145", "145.5 h"), or null when empty. */
+export function hoursNum(v, name = 'Hours') {
+  if (v === undefined || v === null || v === '') return null;
+  const n = Number(String(v).replace(/[, ]|h(ou)?rs?$|h$/gi, ''));
+  if (!Number.isFinite(n) || n < 0 || n > 100000) throw new HttpError(400, `${name} must be a number between 0 and 100000`);
+  return Math.round(n * 10) / 10;
 }
 
 // ---------- to-dos ----------

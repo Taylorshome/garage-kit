@@ -13,6 +13,7 @@ import { logAnswer } from './answer.js';
 import { matchCar, stripHtml, toText } from './email.js';
 import { deleteFile, putFile, safeName } from './store.js';
 import { HttpError, newId, nowSec, sha256Hex, todayLocal } from './util.js';
+import { noun, usesHours } from './vehicle.js';
 
 export let RECEIPT_MODEL = '@cf/thinkingmachines/inkling-2-small';
 export let RECEIPT_FALLBACK = '@cf/deepseek-ai/deepseek-v4.1-flash-1017';
@@ -34,16 +35,16 @@ export const RECEIPT_TYPES = /^(image\/(jpeg|png|webp|gif|heic|heif)|application
 const LINE_TYPES = ['part', 'labor', 'service', 'fee', 'discount'];
 
 // ---------------------------------------------------------------- AI prompt
-export const RECEIPT_PROMPT = `You read car-maintenance receipts for a family garage app: shop invoices, quick-lube tickets, parts-store receipts and online parts orders (e.g. RockAuto). Several images are pages of ONE receipt.
+export const RECEIPT_PROMPT = `You read vehicle-maintenance receipts for a family garage app (cars, trucks, motorcycles, side-by-sides / UTVs and ATVs): shop and dealer invoices, quick-lube tickets, parts-store receipts and online parts orders (e.g. RockAuto, Partzilla, RevZilla, Rocky Mountain ATV/MC). Several images are pages of ONE receipt.
 Return ONLY one JSON object, no prose, with exactly these keys:
 {"car_id": string|null, "vehicle": {"year": number|null, "make": string|null, "model": string|null, "vin": string|null, "plate": string|null},
- "date": "YYYY-MM-DD"|null, "mileage": number|null, "shop": string|null, "invoice_number": string|null, "kind": "service"|"parts",
+ "date": "YYYY-MM-DD"|null, "mileage": number|null, "hours": number|null, "shop": string|null, "invoice_number": string|null, "kind": "service"|"parts",
  "title": string, "subtotal": number|null, "tax": number|null, "total": number|null,
  "line_items": [{"description": string, "brand": string|null, "part_number": string|null, "qty": number|null, "unit_price": number|null, "amount": number|null, "type": "part"|"labor"|"service"|"fee"|"discount", "completes": [string]}],
  "not_performed": [string], "low_confidence": [{"field": string, "why": string}], "notes": string|null}
 Rules:
-- car_id: one of the garage cars listed below, matched by VIN, plate or year/make/model printed on the receipt. If the receipt names no vehicle, use null unless the parts clearly fit only one car (then add {"field":"car"} to low_confidence).
-- date: the transaction/invoice date (US receipts are MM/DD/YY). mileage: the odometer reading printed on the receipt (with "in"/"out", use out); NEVER the "next service due" number; null if none is printed.
+- car_id: one of the garage vehicles listed below, matched by VIN, plate or year/make/model printed on the receipt. If the receipt names no vehicle, use null unless the parts clearly fit only one car (then add {"field":"car"} to low_confidence).
+- date: the transaction/invoice date (US receipts are MM/DD/YY). mileage: the odometer reading printed on the receipt (with "in"/"out", use out); NEVER the "next service due" number; null if none is printed. hours: the engine-hour meter reading if printed (UTVs, ATVs, some bikes: "hrs"), else null; never put hours in mileage.
 - kind: "service" when a shop worked on the car, "parts" when parts were bought (do-it-yourself).
 - title: a short plain summary, e.g. "Oil change + tire rotation" or "HVAC actuators (parts)".
 - line_items: every charged line in order. Copy part numbers exactly as printed. amount = the line's extended price. Labor lines are type "labor". Sales tax goes in "tax", NOT in line_items. Shipping and shop fees are "fee" lines; coupons and discounts are "discount" lines with a negative amount.
@@ -56,7 +57,7 @@ Rules:
 function carsBrief(cars, items) {
   return cars.map(c => {
     const list = items.filter(i => i.car_id === c.id).map(i => i.name).join('; ');
-    return `- car_id "${c.id}": ${c.nickname} = ${c.year || ''} ${c.make || ''} ${c.model || ''} ${c.engine ? `(${c.engine.replace(/\s*\(.*\)/, '')})` : ''}, VIN ${c.vin || 'unknown'}, odometer about ${c.mileage ?? 'unknown'}\n  schedule: ${list || '(none)'}`;
+    return `- car_id "${c.id}": ${c.nickname} = ${c.year || ''} ${c.make || ''} ${c.model || ''} ${c.engine ? `(${c.engine.replace(/\s*\(.*\)/, '')})` : ''} [${noun(c)}], VIN ${c.vin || 'unknown'}, odometer about ${c.mileage ?? 'unknown'}${usesHours(c) ? `, engine hours about ${c.hours ?? 'unknown'}` : ''}\n  schedule: ${list || '(none)'}`;
   }).join('\n');
 }
 
@@ -154,6 +155,7 @@ export function normalizeDraft(raw = {}) {
     car_id: txt(raw.car_id, 80),
     vehicle: { year: num(v.year, { min: 1900, max: 2100 }), make: txt(v.make, 40), model: txt(v.model, 60), vin: txt(v.vin, 17)?.toUpperCase().replace(/[^A-Z0-9]/g, '') || null, plate: txt(v.plate, 20) },
     date: parseDate(raw.date), mileage: (() => { const m = num(raw.mileage ?? raw.odometer, { min: 0, max: 2_000_000 }); return m == null ? null : Math.round(m); })(),
+    hours: (() => { const h = num(raw.hours ?? raw.engine_hours, { min: 0, max: 100_000 }); return h == null ? null : Math.round(h * 10) / 10; })(),
     shop: txt(raw.shop ?? raw.vendor, 120), invoice_number: txt(raw.invoice_number, 60), kind,
     title: txt(raw.title, 160), subtotal: money2(raw.subtotal), tax: money2(raw.tax), total: money2(raw.total),
     line_items: items,
@@ -171,7 +173,7 @@ const RULES = [
   [/\boil\b.*\b(change|filter|service)\b|\blube,? oil\b|\boil (&|and) filter\b|\blof\b|\bpf\d{2,3}[a-z]{0,2}\b|\b(0|5|10)w-?(20|30|40)\b|signature (svc|service)|\b(synthetic|conventional|high mileage) (oil|blend)\b|\bmotor oil\b/i, /\b(engine )?oil (and|&) filter\b|\boil change\b|^engine oil/i],
   [/\btire rotation\b|\brotate (the )?tires\b/i, /\btire rotation\b/i],
   [/\bcabin (air )?filter\b|\ba\/?c filter\b/i, /\bcabin\b/i],
-  [/\bengine air filter\b|\bair filter\b(?!.*cabin)/i, /\bengine air filter\b/i],
+  [/\bengine air filter\b|\bair filter\b(?!.*cabin)/i, /\bengine air filter\b|^air filter\b/i],
   [/\bbrake fluid (flush|exchange|service|change)\b|\bflush(ed)? brake fluid\b/i, /\bbrake fluid\b/i],
   [/\b(coolant|antifreeze|cooling system) (flush|exchange|service|drain)\b|\bflush(ed)? (the )?coolant\b/i, /\bcoolant flush|cooling system (service|drain)|coolant flush\/replace/i],
   [/\bspark plugs?\b/i, /\bspark plugs?\b/i],
@@ -182,6 +184,18 @@ const RULES = [
   [/\btransfer case (fluid|service|oil)\b/i, /\btransfer case fluid\b/i],
   [/\bfuel filter\b/i, /\bfuel filter\b/i],
   [/\bpcv\b/i, /\bpcv\b/i],
+  // motorcycles and off-road (UTV / ATV)
+  [/\bvalve (clearance|adjust|lash|check)|\bvalve(s)? adjust/i, /\bvalve clearance\b/i],
+  [/\bcarb(uretor)? (sync|synch|balance)|\bsync(h)? carbs?\b/i, /\bcarb(uretor)? sync/i],
+  [/\b(final (gear|drive)|shaft drive|rear end|hypoid) (oil|fluid|service|change)\b/i, /\bfinal gear oil|final drive (oil|fluid)/i],
+  [/\bchain (clean|lube|adjust|service)|\b(clean|lube|adjust)(ed)? (the )?chain\b/i, /\bchain clean/i],
+  [/\b(chain (and|&) sprockets?|sprockets?)\b.*\b(kit|replace|install)|\bchain kit\b/i, /\bchain (&|and) sprockets?/i],
+  [/\bfork (oil|fluid|seals?|service)\b/i, /\bfork oil\b/i],
+  [/\b(drive|cvt) belt\b.*\b(replace|install|new)|\b(replace|install|new)\b.*\b(drive|cvt) belt\b|\bbelt,? drive\b/i, /\b(cvt )?drive belt replacement\b/i],
+  [/\bclutch(es)? (clean|service|inspect)|\bcvt (clean|service)/i, /\bcvt clutch/i],
+  [/\b(front )?diff(erential)? (fluid|oil|service)|\bfront gearcase\b/i, /\bfront differential\b/i],
+  [/\brear (diff(erential)?|gearcase|transaxle|final drive) (fluid|oil|service)?/i, /\brear (differential|gearcase)/i],
+  [/\bgrease (all )?(fittings|zerks|a-?arms|ball joints|u-?joints)|\bgreased\b/i, /\bgrease fittings\b/i],
 ];
 const SEVERE = /police|taxi|fleet|towing|severe/i;
 
@@ -255,7 +269,7 @@ export function validateDraft(input, { cars = [], today = todayLocal(), services
   let car = cars.find(c => c.id === d.car_id) || null;
   if (!car) car = matchCar(cars, { vin: d.vehicle.vin, year: d.vehicle.year, make: d.vehicle.make, model: d.vehicle.model }).car;
   if (car) d.car_id = car.id;
-  if (!car) { d.car_id = null; questions.push('Which car is this for?'); }
+  if (!car) { d.car_id = null; questions.push('Which vehicle is this for?'); }
   else if (d.vehicle.vin && car.vin && d.vehicle.vin.length === 17 && d.vehicle.vin !== car.vin.toUpperCase()) flag('car', 'warn', `The receipt's VIN ${d.vehicle.vin} isn't the ${car.nickname}'s (${car.vin}).`);
 
   // date
@@ -263,8 +277,15 @@ export function validateDraft(input, { cars = [], today = todayLocal(), services
   else if (d.date > today) flag('date', 'error', `${d.date} is in the future.`);
   else if (d.date < '1995-01-01') flag('date', 'warn', 'That date looks too old.');
 
-  // mileage
-  if (d.mileage == null) {
+  // mileage (hours-serviced vehicles: the hour meter is the reading that matters)
+  if (car && usesHours(car) && d.hours == null) {
+    questions.push(`Engine hours missing: ask the hour-meter reading${car.hours != null ? ` (the ${car.nickname} was last at ${car.hours} h)` : ''}, or leave it blank.`);
+  } else if (car && usesHours(car) && car.hours != null && d.hours < car.hours - 20) {
+    flag('hours', 'warn', `${d.hours} h is below the ${car.nickname}'s last known ${car.hours} h. Old receipt or misread?`);
+  }
+  if (d.mileage == null && car && usesHours(car)) {
+    // fine: many off-road receipts only show hours
+  } else if (d.mileage == null) {
     questions.push(`Mileage missing: ask the odometer reading${car?.mileage ? ` (the ${car.nickname} was last at ${car.mileage.toLocaleString('en-US')})` : ''}, or leave it blank.`);
   } else if (car?.mileage != null) {
     if (d.mileage < car.mileage - 2000) flag('mileage', 'warn', `${d.mileage.toLocaleString('en-US')} is well below the ${car.nickname}'s last known ${car.mileage.toLocaleString('en-US')} mi. Old receipt, or a misread?`);
@@ -326,7 +347,7 @@ const fmtMi = n => (n == null ? null : `${Number(n).toLocaleString('en-US')} mi`
 export function draftSummary(v) {
   const d = v.draft, car = v.car;
   const lines = [];
-  lines.push([car ? `${car.nickname} (${car.year} ${car.make} ${car.model})` : 'Car: ?', d.date || 'date ?', fmtMi(d.mileage) || 'miles ?', d.shop || (d.kind === 'parts' ? 'parts' : 'shop ?')].join(' · '));
+  lines.push([car ? `${car.nickname} (${car.year} ${car.make} ${car.model})` : 'Vehicle: ?', d.date || 'date ?', fmtMi(d.mileage) || (d.hours != null ? null : 'miles ?'), d.hours != null ? `${d.hours} h` : null, d.shop || (d.kind === 'parts' ? 'parts' : 'shop ?')].filter(Boolean).join(' · '));
   lines.push(`${d.title}${d.kind === 'parts' ? ' (parts purchase)' : ''}`);
   lines.push(`Marks done: ${v.matched.length ? v.matched.map(m => m.name).join('; ') : 'nothing on the schedule'}`);
   lines.push(`Total ${fmt$(d.total)}${d.tax ? ` (tax ${fmt$(d.tax)})` : ''} · ${d.line_items.length} line${d.line_items.length === 1 ? '' : 's'}`);
@@ -383,7 +404,7 @@ export async function receiptView(env, rowOrId, { full = true } = {}) {
     out.cars = cars.map(c => {
       const ci = items.filter(i => i.car_id === c.id);
       const m = matchItems(v.draft, ci);
-      return { id: c.id, nickname: c.nickname, label: `${c.year ?? ''} ${c.make ?? ''} ${c.model ?? ''}`.trim(), mileage: c.mileage, items: ci.map(i => ({ id: i.id, name: i.name })), matched: m.map(x => x.id), todo_candidates: todoCandidates(openTodos.filter(t => t.car_id === c.id), v.draft, m) };
+      return { id: c.id, nickname: c.nickname, label: `${c.year ?? ''} ${c.make ?? ''} ${c.model ?? ''}`.trim(), mileage: c.mileage, hours: c.hours ?? null, uses_hours: usesHours(c), items: ci.map(i => ({ id: i.id, name: i.name })), matched: m.map(x => x.id), todo_candidates: todoCandidates(openTodos.filter(t => t.car_id === c.id), v.draft, m) };
     });
   }
   return out;
@@ -548,7 +569,7 @@ export async function applyEdits(env, draft, edits = {}, resolveCar) {
   }
   const norm = normalizeDraft({ ...d, ...edits, vehicle: d.vehicle, line_items: edits.line_items !== undefined ? edits.line_items : d.line_items, car_id: d.car_id });
   if (edits.date !== undefined && edits.date && !norm.date) throw new HttpError(400, 'date must be YYYY-MM-DD (or MM/DD/YYYY)');
-  for (const k of ['date', 'mileage', 'shop', 'title', 'total', 'tax', 'kind', 'notes', 'line_items', 'invoice_number']) if (edits[k] !== undefined) d[k] = norm[k];
+  for (const k of ['date', 'mileage', 'hours', 'shop', 'title', 'total', 'tax', 'kind', 'notes', 'line_items', 'invoice_number']) if (edits[k] !== undefined) d[k] = norm[k];
   if (Array.isArray(edits.item_ids)) { d.item_ids = edits.item_ids.map(String).slice(0, 30); d.item_names = null; }
   if (Array.isArray(edits.schedule_items)) { d.item_names = edits.schedule_items.map(String).slice(0, 20); d.item_ids = null; }   // exact list
   return d;
@@ -567,7 +588,7 @@ function serviceFromDraft(v, member, source) {
   ].filter(Boolean).join('\n');
   const parts = d.line_items.filter(l => l.type === 'part' && (l.part_number || l.brand)).map(l => `${[l.brand, l.part_number].filter(Boolean).join(' ')} ${l.description}${l.qty != null && l.qty !== 1 ? ` x${l.qty}` : ''}`.trim()).join('; ');
   return {
-    date: d.date, mileage: d.mileage, title: d.title || 'Receipt', details: details.slice(0, 8000), parts: parts.slice(0, 4000) || null,
+    date: d.date, mileage: d.mileage, hours: d.hours ?? null, title: d.title || 'Receipt', details: details.slice(0, 8000), parts: parts.slice(0, 4000) || null,
     cost: d.total, diy: d.kind === 'parts', shop: d.kind === 'parts' ? null : d.shop, item_ids: v.matched.map(m => m.id),
   };
 }

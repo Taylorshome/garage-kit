@@ -1,6 +1,6 @@
 # Garage kit
 
-A household car-maintenance app (3D garage, maintenance schedules, symptoms, receipts, parts, guided diagnosis, an AI
+A household vehicle-maintenance app for cars, trucks, motorcycles, side-by-sides (UTVs) and ATVs (3D garage, maintenance schedules, symptoms, receipts, parts, guided diagnosis, an AI
 mechanic, and an MCP server so Claude can use it). Each person runs their **own copy**: on **their own Cloudflare
 account**, or in **Docker on their own machine** (Unraid, a NAS, a Pi; docs/docker.md). Nothing runs through anyone
 else's account, server, domain or Claude subscription.
@@ -10,7 +10,7 @@ else's account, server, domain or Claude subscription.
 | They say something like | Do this |
 |---|---|
 | "set up my garage", "install this", "deploy it", first time in this repo | Follow `.claude/skills/setup-garage/SKILL.md` |
-| "add a car", "add my truck", "I got a new car" | `.claude/skills/add-car/SKILL.md` |
+| "add a car", "add my truck", "add my bike / side by side / quad", "I got a new car" | `.claude/skills/add-car/SKILL.md` |
 | "research my car", "research the waiting symptoms", "what are the common problems with …" | `.claude/skills/research-car/SKILL.md` |
 | "help me figure out …", "walk me through …", "diagnose …" | `.claude/skills/diagnose/SKILL.md` |
 | "update", "pull the latest", "redeploy", "upgrade the container" | `.claude/skills/update-garage/SKILL.md` |
@@ -45,15 +45,19 @@ Read the skill file before acting; they contain the exact commands and the safet
 - `src/` Worker: `index.js` (routing, OAuth provider, cron/email entry), `docker.js` (the Docker entry: AI provider +
   internal routes), `ai-providers.js` (AI_PROVIDER: openai-compatible / anthropic / cloudflare-rest / none), `auth.js` (password / none / Cloudflare Access /
   OIDC), `api.js` (JSON API), `mcp.js` (MCP tools), `diagnosis.js`, `receipts.js`, `email.js`, `notify.js` + `push.js` +
-  `scheduled.js` (notifications), `research-jobs.js` (research queue), `mechanic.js` + `answer.js` (AI mechanic).
-- `public/` the app (no build step): `app.js`, `car3d.js` (procedural body styles, optional uploaded .glb), `cars.js`
-  (SVG fallback), `sw.js` (push).
+  `scheduled.js` (notifications), `research-jobs.js` (research queue), `mechanic.js` + `answer.js` (AI mechanic),
+  `vehicle.js` (vehicle types, starter schedules per type, JASO flag, parts sources, vPIC mapping; pure), `due.js`
+  (due by miles / engine hours / date), `recalls.js` (VIN decode, NHTSA / CPSC recalls), `generic-plans.js` (built-in
+  per-type diagnosis plans, e.g. UTV CVT belt and overheating).
+- `public/` the app (no build step): `app.js`, `car3d.js` (procedural body styles, optional uploaded .glb),
+  `vehicles3d.js` (procedural motorcycles, UTV, ATV), `cars.js` (SVG fallback), `sw.js` (push).
 - `scripts/` `configure.mjs` (garage.config.json -> wrangler.jsonc), `secrets.mjs`, `add-car.mjs`, `load-research.mjs`
   (+ `loader-safety.mjs`), `seed-demo.mjs`, `backup.mjs`, `e2e-local.mjs`.
 - `docker/` the container runtime: `server.mjs` (Miniflare/workerd, migrations, cron, proxy, IMAP, health),
   `config.mjs` (env -> bindings, generated secrets), `outbound.mjs` (SSRF filter), `migrate.mjs`, `imap.mjs`,
   `admin.mjs` + `cli.mjs` (`garage` command). `Dockerfile`, `compose.yaml`, `unraid/garage-kit.xml`.
 - `research-worker/` optional background researcher for an always-on computer.
+- `demo/` demo data for `scripts/seed-demo.mjs` (`demo/` sedan, `demo/bike/` V Star 650, `demo/utv/` side-by-side).
 - `docs/` features, research schema, integrations, research worker, development.
 - Tests: `npm test` (Node + the worker's Python tests). Local end to end: `docs/development.md`.
 - Releases: bump `package.json` version, add a `## [x.y.z]` section to `CHANGELOG.md`, push tag `vx.y.z`; the release

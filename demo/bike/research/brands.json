@@ -1,0 +1,195 @@
+{
+ "vehicle": "2007 Yamaha V Star 650 (XVS650 Custom / XVS650A Classic / XVS650AT Silverado; variant unconfirmed), 649cc air-cooled V-twin, dual Mikuni carbs, wet clutch, shaft drive",
+ "as_of": "2026-11-24",
+ "notes": [
+  "Reduced scope (demo vehicle): 4 parts.",
+  "Tiers: oem / premium / value / budget. Verdicts: pick / good / ok / avoid.",
+  "RevZilla pages return 403 to automated fetch, so RevZilla OEM part numbers come from search-result titles only; prices not checked. Partzilla not fetched. Confirm on a Partzilla/Yamaha fiche with your VIN or at a local Yamaha dealer.",
+  "No RockAuto (doesn't sell motorcycle parts)."
+ ],
+ "parts": [
+  {
+   "part": "Oil filter",
+   "category": "engine",
+   "options": [
+    {
+     "brand": "Yamaha OEM",
+     "tier": "oem",
+     "part_number": "verify (4X7-13440-xx or 5GH-13440-71-00 per fiche)",
+     "price_usd": null,
+     "where": "Local Yamaha dealer / Partzilla / RevZilla OEM fiche",
+     "warranty": "n/a",
+     "reputation": "Genuine; number varies by fiche, look it up by VIN",
+     "verdict": "good",
+     "sources": [
+      "https://www.revzilla.com/oem/yamaha/yamaha-5gh-13440-71-00-element-assy-oil-cl",
+      "https://www.mpartz.com/oilfilter-yamaha-xvs650-1997-2007-hiflo-hf145-p-35908m309y"
+     ]
+    },
+    {
+     "brand": "HiFlo",
+     "tier": "value",
+     "part_number": "HF145",
+     "price_usd": null,
+     "where": "Amazon / RevZilla / BikeBandit",
+     "warranty": "n/a",
+     "reputation": "Widely used, cross-refs Yamaha 4X7-13440",
+     "verdict": "pick",
+     "sources": [
+      "https://www.mpartz.com/oilfilter-yamaha-xvs650-1997-2007-hiflo-hf145-p-35908m309y",
+      "https://ebay.com/itm/273490590906"
+     ]
+    },
+    {
+     "brand": "K&N",
+     "tier": "premium",
+     "part_number": "KN-145",
+     "price_usd": null,
+     "where": "RevZilla / Amazon",
+     "warranty": "n/a",
+     "reputation": "K&N lists for 2007 XVS650",
+     "verdict": "good",
+     "sources": [
+      "https://www.knfilters.com/yamaha/xvs650-v-star-custom/650/2007"
+     ]
+    }
+   ],
+   "pick": "HiFlo HF145 (or K&N KN-145).",
+   "avoid": []
+  },
+  {
+   "part": "Spark plugs",
+   "category": "ignition",
+   "options": [
+    {
+     "brand": "NGK",
+     "tier": "oem",
+     "part_number": "DPR7EA-9",
+     "price_usd": null,
+     "where": "Local Yamaha dealer / Amazon / RevZilla",
+     "warranty": "n/a",
+     "reputation": "Factory-type plug",
+     "verdict": "pick",
+     "sources": [
+      "https://www.mpartz.com/spark-plug-yamaha-xvs650-1997-2007-ngk-dpr7ea9-p-203m309y"
+     ]
+    },
+    {
+     "brand": "NGK Iridium IX",
+     "tier": "premium",
+     "part_number": "DPR7EIX-9",
+     "price_usd": null,
+     "where": "Amazon / RevZilla",
+     "warranty": "n/a",
+     "reputation": "Longer life; no real gain on a carbureted twin",
+     "verdict": "ok",
+     "sources": [
+      "https://www.sportbiketrackgear.com/ngk-iridium-ix-spark-plug-dpr7eix-9-1998-2010-yamaha-xvs650a-v-star-classic",
+      "https://www.sportbiketrackgear.com/ngk-iridium-ix-spark-plug-dpr7eix-9-2002-2010-yamaha-xvs650at-v-star-silverado/"
+     ]
+    }
+   ],
+   "pick": "NGK DPR7EA-9, gapped to manual spec (~0.035 in, verify).",
+   "avoid": [
+    {
+     "brand": "BR10EG / RA8HC",
+     "why": "Listed by some retailer pages for this bike; wrong plug",
+     "sources": [
+      "https://www.cyclegear.com/motorcycle/2007-yamaha-xvs650a-v-star-classic?page=13"
+     ]
+    }
+   ]
+  },
+  {
+   "part": "Battery",
+   "category": "electrical",
+   "options": [
+    {
+     "brand": "Yuasa",
+     "tier": "oem",
+     "part_number": "YT12B-BS",
+     "price_usd": null,
+     "where": "Local Yamaha dealer / Amazon / BikeBandit",
+     "warranty": "verify",
+     "reputation": "Yuasa is Yamaha's OE supplier; PartsGiant lists for XVS650 1998-2011",
+     "verdict": "pick",
+     "sources": [
+      "https://www.partsgiant.com/p342186-yuasa-maintenance-free-battery?f=116709"
+     ]
+    },
+    {
+     "brand": "PowerStar",
+     "tier": "budget",
+     "part_number": "PM12B-BS",
+     "price_usd": null,
+     "where": "Walmart",
+     "warranty": "verify",
+     "reputation": "Cheap; listed for 2007 V-Star 650",
+     "verdict": "ok",
+     "sources": [
+      "https://www.walmart.com/ip/394053495"
+     ]
+    }
+   ],
+   "pick": "Yuasa YT12B-BS; confirm against the label on the old battery.",
+   "avoid": [
+    {
+     "brand": "YTX14-BS",
+     "why": "No source ties it to the XVS650; larger case",
+     "sources": [
+      "https://www.partsgiant.com/p342346-yuasa-factory-activated-maintenance-free-lead-acid-battery?m=28077192"
+     ]
+    }
+   ]
+  },
+  {
+   "part": "Regulator/rectifier",
+   "category": "electrical",
+   "options": [
+    {
+     "brand": "Yamaha OEM",
+     "tier": "oem",
+     "part_number": "5KP-81960-00-00",
+     "price_usd": null,
+     "where": "RevZilla OEM / Partzilla / local Yamaha dealer",
+     "warranty": "n/a",
+     "reputation": "Correct plug-in part",
+     "verdict": "good",
+     "sources": [
+      "https://www.revzilla.com/oem/yamaha/yamaha-5kp-81960-00-00-rectifier-regulator-assy",
+      "https://www.revzilla.com/oem/yamaha/1999-yamaha-xvs650-v-star-custom/electrical-1"
+     ]
+    },
+    {
+     "brand": "RMStator",
+     "tier": "value",
+     "part_number": "RMS020-103273",
+     "price_usd": null,
+     "where": "rmstator.com / Amazon",
+     "warranty": "verify",
+     "reputation": "Listed for VStar 650 1999-2016",
+     "verdict": "good",
+     "sources": [
+      "https://rmstator.com/en_ca/rms020-103273",
+      "https://leadersrpmshop.com/rmstator-new-aftermarket-yamaha-regulator-rectifier-rms020-103273"
+     ]
+    },
+    {
+     "brand": "Shindengen MOSFET",
+     "tier": "premium",
+     "part_number": "FH020AA kit",
+     "price_usd": "~149.99 (one eBay listing)",
+     "where": "eBay / Roadster Cycle-type kit sellers",
+     "warranty": "verify",
+     "reputation": "Cooler-running MOSFET upgrade; needs wiring adapters; fitment kit for V Star not sourced",
+     "verdict": "ok",
+     "sources": [
+      "https://www.ebay.com/itm/SHINDENGEN-MOSFET-FH020AA-REGULATOR-RECTIFIER-KIT-NEW-GENUINE-SHINDENGEN-/380704480069"
+     ]
+    }
+   ],
+   "pick": "Only after a charging test: OEM 5KP-81960-00-00 or RMStator RMS020-103273.",
+   "avoid": []
+  }
+ ]
+}

@@ -1,0 +1,624 @@
+{
+ "_about": "Guided-diagnosis plan for the demo V Star 650 (matches any 2007 Yamaha V Star 650). Sources on every step.",
+ "plans": [
+  {
+   "id": "vstar-hard-start",
+   "car_id": null,
+   "vehicle": {
+    "year": 2007,
+    "make": "Yamaha",
+    "model": "V Star 650"
+   },
+   "version": 1,
+   "symptom": "Hard to start or will not idle",
+   "title": "V Star 650 hard starting / will not idle",
+   "aliases": [
+    "hard start",
+    "wont start",
+    "will not idle",
+    "dies at idle",
+    "runs only on choke",
+    "stalls",
+    "cranks but wont start",
+    "after storage"
+   ],
+   "todo_match": [
+    "start",
+    "idle",
+    "carb",
+    "choke",
+    "stall"
+   ],
+   "intro": "Nine checks, free and quick first. Storage problems (stale fuel, gummed pilot jets) top the list on a carbureted V Star; then battery, plugs, ignition and air leaks. The carb clean is last because it takes an afternoon.",
+   "safety_overview": "Gasoline is the main hazard: work outdoors or ventilated, no flames or smoking, wipe spills, keep the fuel cock OFF when the carbs are open. When spark testing, ground the plug firmly. The exhaust stays hot long after running.",
+   "causes": [
+    {
+     "id": "fuel_cock",
+     "name": "Fuel cock left OFF or tank on reserve/empty",
+     "likelihood": "medium",
+     "fix": "Turn the fuel cock to ON (RES if low) and fill up",
+     "cost": "$0",
+     "parts": [],
+     "keywords": [
+      "petcock",
+      "fuel cock",
+      "reserve",
+      "out of gas"
+     ]
+    },
+    {
+     "id": "stale_fuel",
+     "name": "Stale fuel / varnish in the float bowls",
+     "likelihood": "high",
+     "fix": "Drain tank and both float bowls, refill with fresh fuel (stabilizer for storage)",
+     "cost": "$0-20",
+     "parts": [
+      "Fuel stabilizer"
+     ],
+     "keywords": [
+      "old gas",
+      "stale fuel",
+      "varnish",
+      "storage"
+     ]
+    },
+    {
+     "id": "pilot_jet",
+     "name": "Clogged pilot jets / idle passages",
+     "likelihood": "high",
+     "fix": "Remove the carbs, clean pilot jets and passages (or replace jets), new bowl gaskets/O-rings, then sync and set idle",
+     "cost": "$20-60 DIY; $150+ shop (general knowledge)",
+     "parts": [
+      "Pilot jet",
+      "Carburetor rebuild kit"
+     ],
+     "keywords": [
+      "pilot jet",
+      "carb",
+      "runs on choke",
+      "wont idle"
+     ]
+    },
+    {
+     "id": "choke",
+     "name": "Starter (choke) not working or not used correctly",
+     "likelihood": "low-medium",
+     "fix": "Use full choke cold, free up or replace the choke cable/plunger",
+     "cost": "$0-40",
+     "parts": [
+      "Choke (starter) cable"
+     ],
+     "keywords": [
+      "choke",
+      "enricher",
+      "cold start"
+     ]
+    },
+    {
+     "id": "battery",
+     "name": "Weak battery / slow cranking",
+     "likelihood": "medium",
+     "fix": "Charge with a smart charger; replace if it will not hold charge",
+     "cost": "$0-80",
+     "parts": [
+      "Battery (GT12B-4 / YT12B-BS, verify)"
+     ],
+     "keywords": [
+      "battery",
+      "slow crank",
+      "clicks"
+     ]
+    },
+    {
+     "id": "plugs",
+     "name": "Fouled or worn spark plugs",
+     "likelihood": "medium",
+     "fix": "Two new NGK DPR7EA-9 gapped 0.8-0.9 mm",
+     "cost": "$10-20",
+     "parts": [
+      "Spark plug (NGK DPR7EA-9)"
+     ],
+     "keywords": [
+      "spark plug",
+      "fouled",
+      "misfire",
+      "one cylinder"
+     ]
+    },
+    {
+     "id": "intake_leak",
+     "name": "Air leak at cracked intake boots",
+     "likelihood": "low-medium",
+     "fix": "Replace the intake manifold boots/clamps",
+     "cost": "$30-80 (general knowledge)",
+     "parts": [
+      "Intake manifold boot"
+     ],
+     "keywords": [
+      "intake boot",
+      "vacuum leak",
+      "surging idle"
+     ]
+    },
+    {
+     "id": "ignition",
+     "name": "Ignition fault (plug cap, coil, pickup, TCI)",
+     "likelihood": "low",
+     "fix": "Replace the failed cap or coil; dealer diagnosis for pickup/TCI",
+     "cost": "$20-150",
+     "parts": [
+      "Spark plug cap",
+      "Ignition coil"
+     ],
+     "keywords": [
+      "no spark",
+      "coil",
+      "ignition"
+     ]
+    },
+    {
+     "id": "idle_set",
+     "name": "Idle speed set too low (or carbs out of sync)",
+     "likelihood": "low-medium",
+     "fix": "Set 1150-1250 rpm warm with the throttle stop screw; dealer sync",
+     "cost": "$0 DIY; sync $60-120 shop (general knowledge)",
+     "parts": [],
+     "keywords": [
+      "idle speed",
+      "sync",
+      "stalls at lights"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "id": "fuel_cock_level",
+     "title": "Fuel cock position and fuel level",
+     "minutes": 2,
+     "tools": [
+      "flashlight"
+     ],
+     "safety": [
+      "Engine off, no smoking or flames near the open tank."
+     ],
+     "do": "Find the fuel cock lever under the left side of the tank. Note whether it points at OFF, ON or RES. Open the filler cap and look at how much fuel is in the tank.",
+     "look_for": "The lever must be on ON (or RES if the tank is low) for fuel to reach the carbs. The manual says to turn it OFF whenever the engine is stopped, so it is easy to forget.",
+     "tests": [
+      "fuel_cock"
+     ],
+     "sources": [
+      "https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf"
+     ],
+     "options": [
+      {
+       "key": "on_full",
+       "label": "On ON, tank has fuel",
+       "means": "Fuel supply at the tank looks fine.",
+       "effects": {
+        "fuel_cock": "rule_out"
+       }
+      },
+      {
+       "key": "was_off",
+       "label": "Was on OFF",
+       "means": "That alone stops the engine after the bowls empty. Turn it to ON and try again.",
+       "effects": {
+        "fuel_cock": "confirm"
+       },
+       "found": "fuel_cock",
+       "confidence": "high"
+      },
+      {
+       "key": "low_fuel",
+       "label": "Fuel very low (below the reserve)",
+       "means": "It may be running out on ON. Switch to RES and fill up, then retest.",
+       "effects": {
+        "fuel_cock": "up"
+       }
+      }
+     ]
+    },
+    {
+     "id": "fuel_age",
+     "title": "How old is the fuel? Smell it",
+     "minutes": 3,
+     "tools": [
+      "clear jar"
+     ],
+     "safety": [
+      "Gasoline: outdoors or ventilated, no flames, wipe spills."
+     ],
+     "do": "Think back to when the tank was last filled. Smell the fuel at the filler. If the bike sat more than a couple of months without stabilizer, put a clear jar under one float-bowl drain hose and loosen the drain screw briefly (the manual uses these drains for storage).",
+     "look_for": "Fresh gas smells sharp. Sour or varnish smell, dark color, water drops or sediment in the jar mean stale fuel.",
+     "tests": [
+      "stale_fuel",
+      "pilot_jet"
+     ],
+     "sources": [
+      "https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf",
+      "https://www.motoryk.com/bikes/yamaha/v-star-650/problems",
+      "https://www.revzilla.com/common-tread/spring-carb-cleaning-101"
+     ],
+     "options": [
+      {
+       "key": "fresh",
+       "label": "Fresh (under a month or stabilized), clean in the jar",
+       "means": "Stale fuel is unlikely.",
+       "effects": {
+        "stale_fuel": "rule_out",
+        "pilot_jet": "down"
+       }
+      },
+      {
+       "key": "old_ok",
+       "label": "Old (2+ months) but looks clean",
+       "means": "Possible varnish even if it looks fine. Refill with fresh fuel before going further.",
+       "effects": {
+        "stale_fuel": "up",
+        "pilot_jet": "up"
+       }
+      },
+      {
+       "key": "bad",
+       "label": "Sour, dark, water or sediment",
+       "means": "Stale fuel is the problem and probably gummed the jets too. Drain tank and bowls, refill fresh, then keep going.",
+       "effects": {
+        "stale_fuel": "confirm",
+        "pilot_jet": "up"
+       }
+      }
+     ]
+    },
+    {
+     "id": "battery_crank",
+     "title": "Battery voltage and cranking speed",
+     "minutes": 5,
+     "tools": [
+      "multimeter"
+     ],
+     "safety": [
+      "Remove the side panel carefully; do not short the battery terminals with a tool."
+     ],
+     "do": "The battery is behind panel B. With the key OFF, measure the voltage across the terminals. Then press the starter for 3 seconds (choke on, fuel cock ON) and listen.",
+     "look_for": "About 12.6 V or more is a full battery; under 12.2 V is low (general knowledge). Cranking should be brisk and even. Slow or clicking points to the battery.",
+     "tests": [
+      "battery"
+     ],
+     "sources": [
+      "https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf",
+      "https://www.motoryk.com/bikes/yamaha/v-star-650/problems"
+     ],
+     "options": [
+      {
+       "key": "good",
+       "label": "12.5 V or more, cranks briskly",
+       "means": "Battery and starter are fine.",
+       "effects": {
+        "battery": "rule_out"
+       }
+      },
+      {
+       "key": "low",
+       "label": "12.0-12.4 V, cranks slowly",
+       "means": "Weak battery: charge it fully and retest before judging the carbs.",
+       "effects": {
+        "battery": "up"
+       }
+      },
+      {
+       "key": "dead",
+       "label": "Under 12 V or just clicks",
+       "means": "The battery is the main problem right now. Charge or replace it (then check charging, see the charging plan).",
+       "effects": {
+        "battery": "confirm"
+       },
+       "found": "battery",
+       "confidence": "medium"
+      }
+     ]
+    },
+    {
+     "id": "choke_use",
+     "title": "Choke (starter knob) use and movement",
+     "minutes": 3,
+     "tools": [],
+     "safety": [
+      "Do not leave the choke on more than 3 minutes: the manual warns of exhaust discoloration and afterburning."
+     ],
+     "do": "Cold engine: pull the starter (choke) knob fully on, throttle closed, and start. After it fires, see what happens as you push the knob back in step by step over a minute or two. Make sure the knob moves through its full travel.",
+     "look_for": "Whether it starts on choke, and whether it dies as soon as the choke is reduced.",
+     "tests": [
+      "choke",
+      "pilot_jet"
+     ],
+     "sources": [
+      "https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf",
+      "https://www.revzilla.com/common-tread/spring-carb-cleaning-101"
+     ],
+     "options": [
+      {
+       "key": "starts_holds",
+       "label": "Starts on choke and keeps idling with choke off once warm",
+       "means": "Choke and idle circuit work. Look elsewhere (plugs, idle setting).",
+       "effects": {
+        "choke": "rule_out",
+        "pilot_jet": "down"
+       }
+      },
+      {
+       "key": "choke_only",
+       "label": "Runs only with choke on; dies as it is pushed in",
+       "means": "Classic sign of clogged pilot jets / idle passages.",
+       "effects": {
+        "choke": "rule_out",
+        "pilot_jet": "up"
+       }
+      },
+      {
+       "key": "wont_start",
+       "label": "Will not start even with full choke",
+       "means": "No fuel or no spark. Keep going with plugs and spark.",
+       "effects": {
+        "choke": "up",
+        "pilot_jet": "up"
+       }
+      },
+      {
+       "key": "knob_stuck",
+       "label": "Knob or cable binds / does not move fully",
+       "means": "The choke may not be working at all.",
+       "effects": {
+        "choke": "confirm"
+       },
+       "found": "choke",
+       "confidence": "medium"
+      }
+     ]
+    },
+    {
+     "id": "plugs_read",
+     "title": "Pull and read both spark plugs",
+     "minutes": 15,
+     "tools": [
+      "spark plug wrench (tool kit)",
+      "feeler gauge"
+     ],
+     "safety": [
+      "Engine cold: the exhaust and heads burn. Blow debris away from the plug holes before removing plugs."
+     ],
+     "do": "Pull the caps and remove both plugs with the tool-kit wrench. Compare them and check the gap (0.8-0.9 mm).",
+     "look_for": "Light tan = normal. Wet with fuel or sooty black = fouled or running rich (choke, stale fuel). Worn round electrode or wrong gap = replace (NGK DPR7EA-9).",
+     "tests": [
+      "plugs"
+     ],
+     "sources": [
+      "https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf",
+      "https://maintenanceschedule.com/?p=1749"
+     ],
+     "options": [
+      {
+       "key": "tan",
+       "label": "Both tan, gap in spec",
+       "means": "Plugs are not the problem.",
+       "effects": {
+        "plugs": "rule_out"
+       }
+      },
+      {
+       "key": "fouled",
+       "label": "Wet or black sooty",
+       "means": "Fouled plugs can stop it starting. Replace them; the cause is usually fuel/choke.",
+       "effects": {
+        "plugs": "up",
+        "stale_fuel": "up"
+       }
+      },
+      {
+       "key": "worn",
+       "label": "Worn electrodes or gap out of spec",
+       "means": "Replace both plugs.",
+       "effects": {
+        "plugs": "confirm"
+       }
+      },
+      {
+       "key": "one_dry",
+       "label": "One wet, one dry or different",
+       "means": "One cylinder may not fire or not get fuel; check spark on that side.",
+       "effects": {
+        "ignition": "up",
+        "pilot_jet": "up"
+       }
+      }
+     ]
+    },
+    {
+     "id": "spark_test",
+     "title": "Spark test on each cylinder",
+     "minutes": 10,
+     "tools": [
+      "spare spark plug or spark tester"
+     ],
+     "safety": [
+      "Ground the plug body firmly against bare metal; the manual warns about sparking when cranking with plugs out. Keep away from fuel vapor; do it with the tank cap closed and no spilled fuel.",
+      "Do not hold the plug cap while cranking."
+     ],
+     "do": "Put a plug (or tester) in each cap, ground it against the cylinder head, and crank for a second or two. Check both cylinders.",
+     "look_for": "A strong blue spark on both. Weak orange or no spark on one side points at that cap/coil.",
+     "tests": [
+      "ignition"
+     ],
+     "sources": [
+      "https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf"
+     ],
+     "options": [
+      {
+       "key": "both_good",
+       "label": "Strong spark on both",
+       "means": "Ignition is fine. It is fuel or air.",
+       "effects": {
+        "ignition": "rule_out"
+       }
+      },
+      {
+       "key": "one_weak",
+       "label": "Weak or none on one cylinder",
+       "means": "Ignition fault on that side (cap or coil).",
+       "effects": {
+        "ignition": "confirm"
+       },
+       "found": "ignition",
+       "confidence": "medium"
+      },
+      {
+       "key": "none",
+       "label": "No spark on either",
+       "means": "Check the kill switch, side stand switch (in gear), fuses (ignition 10 A) before blaming the coils.",
+       "effects": {
+        "ignition": "up"
+       }
+      }
+     ]
+    },
+    {
+     "id": "intake_boots",
+     "title": "Inspect intake boots for cracks",
+     "minutes": 10,
+     "tools": [
+      "flashlight"
+     ],
+     "safety": [
+      "Engine cold for the look; for a spray test keep spray off the hot exhaust and away from sparks."
+     ],
+     "do": "Look at the rubber boots between each carb and the cylinder head (between the cylinders), and their clamps. If it idles at all, spray a little carb cleaner around each boot while it idles.",
+     "look_for": "Cracks, loose clamps. Idle rising or changing when sprayed means an air leak.",
+     "tests": [
+      "intake_leak"
+     ],
+     "sources": [
+      "https://yamahaclub.com/forums/topic/46314-650-v-star-crank-no-start"
+     ],
+     "options": [
+      {
+       "key": "ok",
+       "label": "No cracks, no change with spray",
+       "means": "Intake boots are fine.",
+       "effects": {
+        "intake_leak": "rule_out"
+       }
+      },
+      {
+       "key": "cracked",
+       "label": "Cracked boot or idle changes with spray",
+       "means": "Air leak: lean idle and hard starting.",
+       "effects": {
+        "intake_leak": "confirm"
+       },
+       "found": "intake_leak",
+       "confidence": "medium"
+      }
+     ]
+    },
+    {
+     "id": "idle_check",
+     "title": "Warm idle speed (if it will run warm)",
+     "minutes": 15,
+     "tools": [
+      "tachometer"
+     ],
+     "safety": [
+      "Run outdoors. Do not touch the exhaust."
+     ],
+     "do": "Warm the engine (it responds quickly to throttle). Let it idle with the choke off and read rpm. Turn the throttle stop screw to set 1150-1250 rpm.",
+     "look_for": "Whether it holds a steady idle at 1150-1250 rpm after setting.",
+     "tests": [
+      "idle_set",
+      "pilot_jet"
+     ],
+     "sources": [
+      "https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf"
+     ],
+     "options": [
+      {
+       "key": "fixed",
+       "label": "Holds a steady idle once set",
+       "means": "Idle was just set too low.",
+       "effects": {
+        "idle_set": "confirm",
+        "pilot_jet": "down"
+       },
+       "found": "idle_set",
+       "confidence": "medium"
+      },
+      {
+       "key": "hunts",
+       "label": "Hunts, surges or dies even at the right setting",
+       "means": "Points at clogged idle circuits or an out-of-sync pair of carbs.",
+       "effects": {
+        "idle_set": "down",
+        "pilot_jet": "up"
+       }
+      },
+      {
+       "key": "cant",
+       "label": "Will not run warm without choke",
+       "means": "Idle circuit blocked.",
+       "effects": {
+        "idle_set": "rule_out",
+        "pilot_jet": "confirm"
+       },
+       "found": "pilot_jet",
+       "confidence": "high"
+      }
+     ]
+    },
+    {
+     "id": "carb_clean",
+     "title": "Carb clean: pilot jets and passages",
+     "minutes": 240,
+     "tools": [
+      "screwdrivers",
+      "carb cleaner",
+      "fine wire or jet cleaning set",
+      "compressed air"
+     ],
+     "safety": [
+      "Fuel cock OFF, drain bowls into a container, no flames. Wear eye protection with carb cleaner and compressed air."
+     ],
+     "do": "Remove the carbs (tank, air box off). Remove the float bowls and pilot jets. Hold each pilot jet to the light: you should see a clean round hole. Clean jets and passages, blow through with air, new bowl gaskets. Reassemble, then set idle and have the carbs synced.",
+     "look_for": "Varnish in the bowls and a blocked pilot jet hole confirm the cause. After cleaning it should idle without choke when warm.",
+     "tests": [
+      "pilot_jet"
+     ],
+     "sources": [
+      "https://www.revzilla.com/common-tread/spring-carb-cleaning-101",
+      "https://yamahaclub.com/forums/topic/46314-650-v-star-crank-no-start",
+      "https://www.motoryk.com/bikes/yamaha/v-star-650/problems"
+     ],
+     "options": [
+      {
+       "key": "clogged_fixed",
+       "label": "Jets were blocked; idles now",
+       "means": "Clogged pilot jets were the cause.",
+       "effects": {
+        "pilot_jet": "confirm"
+       },
+       "found": "pilot_jet",
+       "confidence": "high"
+      },
+      {
+       "key": "clean_still",
+       "label": "Jets looked clean; still will not idle",
+       "means": "Check the passage behind the jet, the float height, and the sync; or an intake leak.",
+       "effects": {
+        "pilot_jet": "down",
+        "intake_leak": "up",
+        "idle_set": "up"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

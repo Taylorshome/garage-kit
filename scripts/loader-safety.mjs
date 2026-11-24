@@ -8,7 +8,7 @@
 //              this load would throw away                                     -> refused unless --accept-drift (on top of --force)
 // Before anything is written, the affected tables are exported to backups/d1/pre-<loader>-<UTC stamp>.sql (mode 600).
 // Exit codes: 0 ok / dry run, 2 refused (destructive), 3 refused (drift), 4 backup failed.
-import { chmodSync, existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
+import { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const KEY_FIELDS = ['symptom', 'number', 'campaign', 'title', 'summary', 'item', 'name', 'part', 'fluid', 'topic', 'issue'];
@@ -112,8 +112,19 @@ export function backup({ tables, loader, remote, dbName, root, run, log = consol
   mkdirSync(dir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
   const path = join(dir, `pre-${loader}-${stamp}.sql`);
-  try { run(['d1', 'export', dbName, '--remote', '--output', path, ...tables.flatMap(t => ['--table', t])]); }
-  catch (e) { log(`BACKUP FAILED, nothing written (${String(e.message).slice(-300)})`); return { exit: 4 }; }
+  // One table per export call, appended to the same file: older wrangler releases (e.g. 4.69, the oldest this kit
+  // allows) define --table as a single value and refuse a repeated one ("expects a single value"), which made every
+  // multi-table backup fail.
+  try {
+    writeFileSync(path, '', { mode: 0o600 });
+    for (const t of tables) {
+      const part = `${path}.${t}.part`;
+      try {
+        run(['d1', 'export', dbName, '--remote', '--output', part, '--table', t]);
+        appendFileSync(path, readFileSync(part, 'utf8') + '\n');
+      } finally { rmSync(part, { force: true }); }
+    }
+  } catch (e) { log(`BACKUP FAILED, nothing written (${String(e.message).slice(-300)})`); return { exit: 4 }; }
   const ok = existsSync(path) && statSync(path).size > 0 && tables.every(t => new RegExp(`CREATE TABLE\\s+(IF NOT EXISTS\\s+)?[\`"']?${t}[\`"']?\\s*\\(`, 'i').test(readFileSync(path, 'utf8')));
   if (!ok) { log('BACKUP FAILED (export incomplete), nothing written'); return { exit: 4 }; }
   chmodSync(path, 0o600);

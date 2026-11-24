@@ -106,7 +106,165 @@ const SHAPES = {
     cladding: true,
     rocker: 166,
   },
+  suv: {
+    wheels: [160, 462], cy: 200, r: 40, arch: 50,
+    body: 'M 30 200 L 28 132 Q 28 74 58 64 L 374 58 Q 388 58 396 68 L 434 118 Q 524 122 558 132 Q 574 138 576 160 L 576 200 L 512 200 A 50 50 0 0 0 412 200 L 210 200 A 50 50 0 0 0 110 200 Z',
+    glass: 'M 46 120 L 52 84 Q 56 72 72 72 L 366 68 Q 378 68 386 78 L 418 120 Z',
+    pillars: ['M 138 70 L 150 70 L 150 122 L 138 122 Z', 'M 270 69 L 282 69 L 282 122 L 270 122 Z', 'M 380 70 L 392 74 L 424 120 L 410 120 Z'],
+    seams: ['M 282 124 L 280 196', 'M 426 124 Q 432 160 428 196', 'M 150 124 L 152 196'],
+    handles: [[244, 138], [392, 138]],
+    character: 'M 34 140 L 560 142',
+    head: 'M 538 132 Q 562 134 574 144 L 573 154 Q 552 149 534 142 Z',
+    tail: 'M 28 120 L 38 120 L 38 156 L 28 156 Z',
+    grille: 'M 567 152 L 576 152 L 576 180 L 567 180 Z',
+    mirror: 'M 426 108 Q 444 102 450 112 L 446 122 Q 432 124 426 118 Z',
+    rail: 'M 80 60 L 340 56 L 340 52 L 80 56 Z',
+    cladding: true,
+    rocker: 170,
+  },
 };
+
+// ---------------------------------------------------------------- motorcycles, UTV, ATV (side profiles drawn in metres)
+const MOTO = new Set(['cruiser', 'sport', 'dualsport', 'scooter']);
+const f1 = n => Math.round(n * 10) / 10;
+function arcBand(P, cx, cy, R, rIn0, rIn1, a0, a1, k) {
+  // fender seen from the side: outer arc a0 -> a1 (deg, CCW, 0 = forward), skirt back along a shallower inner arc
+  const pt = (r, a) => P(cx + r * Math.cos(a * Math.PI / 180), cy + r * Math.sin(a * Math.PI / 180));
+  const [ox0, oy0] = pt(R, a0), [ox1, oy1] = pt(R, a1), [ix1, iy1] = pt(rIn1, a1), [ix0, iy0] = pt(rIn0, a0);
+  const big = a1 - a0 > 180 ? 1 : 0, rin = ((rIn0 + rIn1) / 2) * k;
+  return `M ${f1(ox0)} ${f1(oy0)} A ${f1(R * k)} ${f1(R * k)} 0 ${big} 0 ${f1(ox1)} ${f1(oy1)} L ${f1(ix1)} ${f1(iy1)} A ${f1(rin)} ${f1(rin)} 0 ${big} 1 ${f1(ix0)} ${f1(iy0)} Z`;
+}
+const poly = (P, pts) => 'M ' + pts.map(([x, y]) => P(x, y).map(f1).join(' ')).join(' L ') + ' Z';
+const line = (P, pts) => 'M ' + pts.map(([x, y]) => P(x, y).map(f1).join(' ')).join(' L ');
+function spokeWheel(cx, cy, r, ids) {
+  const sp = [];
+  for (let i = 0; i < 20; i++) {
+    const a = (i / 20) * Math.PI * 2, b = a + (i % 2 ? 0.5 : -0.5);
+    sp.push(`M ${f1(cx + Math.cos(a) * r * 0.13)} ${f1(cy + Math.sin(a) * r * 0.13)} L ${f1(cx + Math.cos(b) * r * 0.6)} ${f1(cy + Math.sin(b) * r * 0.6)}`);
+  }
+  return `<g class="wheel"><circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r)}" fill="#0d0f12"/>
+    <circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r - 4)}" fill="none" stroke="#24282e" stroke-width="3"/>
+    <path d="${sp.join(' ')}" stroke="#cfd6de" stroke-width="1.1" opacity=".9"/>
+    <circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r * 0.62)}" fill="none" stroke="url(#${ids.rim})" stroke-width="4"/>
+    <circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r * 0.15)}" fill="url(#${ids.rim})" stroke="#5d646d" stroke-width="1.2"/></g>`;
+}
+function knobWheel(cx, cy, r, ids) {
+  const rim = r * 0.5, sp = [];
+  for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2 + 0.3; sp.push(`M ${f1(cx + Math.cos(a) * rim * 0.3)} ${f1(cy + Math.sin(a) * rim * 0.3)} L ${f1(cx + Math.cos(a) * rim * 0.92)} ${f1(cy + Math.sin(a) * rim * 0.92)}`); }
+  return `<g class="wheel"><circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r - 3)}" fill="#0d0f12" stroke="#16181c" stroke-width="7" stroke-dasharray="7 5"/>
+    <circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r - 9)}" fill="none" stroke="#24282e" stroke-width="2"/>
+    <circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(rim)}" fill="#2b2f35"/>
+    <path d="${sp.join(' ')}" stroke="#4a5059" stroke-width="${f1(r * 0.09)}" stroke-linecap="round"/>
+    <circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(rim)}" fill="none" stroke="url(#${ids.rim})" stroke-width="3"/>
+    <circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(rim * 0.25)}" fill="#1a1d22" stroke="#5d646d" stroke-width="1.2"/></g>`;
+}
+/** Body of a powersports side profile: returns { parts, wheels, ground } in SVG units. */
+function powersportArt(type, color, ids) {
+  const paint = `url(#${ids.body})`, chrome = `url(#${ids.rim})`, dark = '#15171a', edge = darken(color, 0.6);
+  if (type === 'utv') {
+    const k = 125, P = (x, y) => [154 + x * k, 250 - y * k];
+    const [rx, ry] = P(0, 0.37), [fx, fy] = P(2.29, 0.37), r = 0.37 * k;
+    const parts = `
+      <path d="${line(P, [[0.80, 0.80], [0.78, 1.35], [0.74, 1.74], [0.86, 1.84], [1.30, 1.85], [1.45, 1.79], [1.62, 1.42], [1.80, 1.0]])}" fill="none" stroke="#3d434b" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="${line(P, [[0.76, 1.72], [0.45, 1.30], [0.05, 0.97]])}" fill="none" stroke="#3d434b" stroke-width="5" stroke-linecap="round"/>
+      <path d="${poly(P, [[0.70, 0.66], [0.84, 1.30], [0.95, 1.30], [0.95, 0.72], [1.40, 0.72], [1.40, 0.62]])}" fill="#1b1714"/>
+      <ellipse cx="${f1(P(1.47, 1.13)[0])}" cy="${f1(P(1.47, 1.13)[1])}" rx="5" ry="15" fill="none" stroke="#111" stroke-width="4" transform="rotate(-38 ${f1(P(1.47, 1.13)[0])} ${f1(P(1.47, 1.13)[1])})"/>
+      <path d="${poly(P, [[-0.26, 0.85], [0.80, 0.85], [0.80, 0.95], [-0.26, 0.95]])}" fill="#1c1e22"/>
+      <path d="${poly(P, [[0.05, 0.40], [2.45, 0.40], [2.45, 0.48], [0.05, 0.48]])}" fill="#0c0d0f"/>
+      <path d="${line(P, [[2.25, 0.37], [2.16, 0.98]])}" stroke="#c9a227" stroke-width="7" stroke-dasharray="3 2"/>
+      <path d="${line(P, [[0.16, 0.40], [0.50, 1.02]])}" stroke="#c9a227" stroke-width="7" stroke-dasharray="3 2"/>
+      <path d="${line(P, [[1.02, 0.47], [0.06, 0.37]])}" stroke="${dark}" stroke-width="6" stroke-linecap="round"/>
+      <path d="${line(P, [[2.10, 0.42], [2.29, 0.33], [2.48, 0.42]])}" stroke="${dark}" stroke-width="4" fill="none"/>
+      <path d="M ${P(1.68, 0.99).map(f1).join(' ')} Q ${P(2.30, 0.92).map(f1).join(' ')} ${P(2.72, 0.70).map(f1).join(' ')} L ${P(2.72, 0.62).map(f1).join(' ')} L ${P(1.68, 0.64).map(f1).join(' ')} Z" fill="${paint}" stroke="${edge}" stroke-width="1.2"/>
+      <path d="${poly(P, [[2.56, 0.76], [2.70, 0.71], [2.70, 0.69], [2.56, 0.73]])}" fill="#eef6ff"/>
+      <path d="M ${P(0.86, 0.98).map(f1).join(' ')} Q ${P(1.2, 0.86).map(f1).join(' ')} ${P(1.74, 1.0).map(f1).join(' ')} L ${P(1.74, 0.58).map(f1).join(' ')} L ${P(0.86, 0.58).map(f1).join(' ')} Z" fill="${paint}" stroke="${edge}" stroke-width="1.2"/>
+      <path d="${poly(P, [[0.70, 0.46], [1.86, 0.46], [1.86, 0.58], [0.70, 0.58]])}" fill="#1c1e22"/>
+      <path d="${poly(P, [[0.40, 0.66], [0.86, 0.66], [0.86, 0.92], [0.40, 0.92]])}" fill="${paint}" stroke="${edge}" stroke-width="1"/>
+      <path d="${arcBand(P, 2.29, 0.37, 0.475, 0.44, 0.44, 22, 150, k)}" fill="${paint}" stroke="${edge}" stroke-width="1"/>
+      <path d="${arcBand(P, 0, 0.37, 0.475, 0.44, 0.44, 28, 142, k)}" fill="${paint}" stroke="${edge}" stroke-width="1"/>
+      <path d="${poly(P, [[-0.27, 0.84], [-0.22, 0.84], [-0.22, 0.89], [-0.27, 0.89]])}" fill="#b3121b"/>`;
+    return { parts, wheels: knobWheel(rx, ry, r, ids) + knobWheel(fx, fy, r, ids), ground: 250, w: [rx, fx], r };
+  }
+  if (type === 'atv') {
+    const k = 190, P = (x, y) => [169 + x * k, 245 - y * k];
+    const [rx, ry] = P(0, 0.3175), [fx, fy] = P(1.25, 0.3175), r = 0.3175 * k;
+    const rack = (x0, x1, y) => `<path d="${line(P, [[x0, y], [x1, y]])} ${[0, 1, 2, 3, 4].map(i => line(P, [[x0 + (x1 - x0) * i / 4, y], [x0 + (x1 - x0) * i / 4, y - 0.05]])).join(' ')}" stroke="${dark}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+    const parts = `
+      <path d="${poly(P, [[0.30, 0.36], [0.98, 0.36], [0.98, 0.70], [0.30, 0.70]])}" fill="#1c1e22"/>
+      <path d="${poly(P, [[0.40, 0.33], [0.98, 0.33], [0.98, 0.38], [0.40, 0.38]])}" fill="#101113"/>
+      <path d="${line(P, [[0.98, 0.80], [1.07, 1.11]])}" stroke="${dark}" stroke-width="5"/>
+      <path d="${line(P, [[0.98, 1.17], [1.075, 1.14]])}" stroke="${dark}" stroke-width="6" stroke-linecap="round"/>
+      <path d="M ${P(-0.40, 0.56).map(f1).join(' ')} L ${P(-0.40, 0.76).map(f1).join(' ')} Q ${P(-0.25, 0.84).map(f1).join(' ')} ${P(0.42, 0.84).map(f1).join(' ')} L ${P(0.42, 0.56).map(f1).join(' ')} Z" fill="${paint}"/>
+      <path d="M ${P(0.95, 0.58).map(f1).join(' ')} L ${P(0.95, 0.84).map(f1).join(' ')} Q ${P(1.45, 0.85).map(f1).join(' ')} ${P(1.76, 0.64).map(f1).join(' ')} L ${P(1.76, 0.48).map(f1).join(' ')} Z" fill="${paint}"/>
+      <path d="M ${P(0.80, 0.74).map(f1).join(' ')} Q ${P(1.0, 1.0).map(f1).join(' ')} ${P(1.22, 0.88).map(f1).join(' ')} L ${P(1.22, 0.74).map(f1).join(' ')} Z" fill="${paint}"/>
+      <path d="M ${P(-0.02, 0.80).map(f1).join(' ')} Q ${P(0.0, 0.91).map(f1).join(' ')} ${P(0.2, 0.905).map(f1).join(' ')} L ${P(0.88, 0.93).map(f1).join(' ')} L ${P(0.90, 0.80).map(f1).join(' ')} Z" fill="#17130f"/>
+      <path d="${arcBand(P, 1.25, 0.3175, 0.415, 0.37, 0.36, 2, 165, k)}" fill="${paint}" stroke="${edge}" stroke-width="1"/>
+      <path d="${arcBand(P, 0, 0.3175, 0.415, 0.36, 0.37, 15, 178, k)}" fill="${paint}" stroke="${edge}" stroke-width="1"/>
+      <path d="M ${P(1.02, 1.12).map(f1).join(' ')} Q ${P(1.12, 1.20).map(f1).join(' ')} ${P(1.23, 1.12).map(f1).join(' ')} L ${P(1.23, 1.09).map(f1).join(' ')} L ${P(1.02, 1.10).map(f1).join(' ')} Z" fill="${paint}"/>
+      ${rack(1.30, 1.70, 0.92)}${rack(-0.38, 0.30, 0.91)}
+      <path d="${poly(P, [[1.68, 0.63], [1.75, 0.62], [1.75, 0.66], [1.68, 0.67]])}" fill="#eef6ff"/>
+      <path d="${poly(P, [[-0.42, 0.70], [-0.38, 0.70], [-0.38, 0.75], [-0.42, 0.75]])}" fill="#b3121b"/>`;
+    return { parts, wheels: knobWheel(rx, ry, r, ids) + knobWheel(fx, fy, r, ids), ground: 245, w: [rx, fx], r };
+  }
+  // motorcycles (cruiser profile; used for every motorcycle type)
+  const k = 200, P = (x, y) => [140 + x * k, 240 - y * k];
+  const [rx, ry] = P(0, 0.3265), [fx, fy] = P(1.625, 0.32), r = 0.325 * k;
+  const [cx, cy] = P(0.95, 0.35);
+  const cyl = a => `<g transform="translate(${f1(cx)} ${f1(cy)}) rotate(${a})">
+      <rect x="-18" y="-74" width="36" height="52" rx="4" fill="url(#${ids.spoke})"/>
+      ${Array.from({ length: 9 }, (_, i) => `<rect x="-19" y="${-72 + i * 5.4}" width="38" height="1.6" fill="#5b626b"/>`).join('')}
+      <ellipse cx="0" cy="-76" rx="15" ry="6" fill="url(#${ids.rim})"/></g>`;
+  const parts = `
+    <path d="${line(P, [[1.27, 0.84], [1.29, 0.62], [1.25, 0.40], [1.15, 0.18], [0.62, 0.18], [0.54, 0.38], [0.62, 0.72]])}" fill="none" stroke="${dark}" stroke-width="5" stroke-linejoin="round"/>
+    <path d="${line(P, [[0.54, 0.40], [0, 0.33]])}" stroke="#2a2d33" stroke-width="8" stroke-linecap="round"/>
+    ${cyl(35)}${cyl(-35)}
+    <ellipse cx="${f1(P(0.92, 0.33)[0])}" cy="${f1(P(0.92, 0.33)[1])}" rx="54" ry="27" fill="#1c1e22"/>
+    <ellipse cx="${f1(P(0.86, 0.31)[0])}" cy="${f1(P(0.86, 0.31)[1])}" rx="21" ry="18" fill="url(#${ids.rim})"/>
+    <path d="M ${P(0.47, 0.55).map(f1).join(' ')} L ${P(0.74, 0.50).map(f1).join(' ')} L ${P(0.74, 0.70).map(f1).join(' ')} L ${P(0.47, 0.625).map(f1).join(' ')} Z" fill="${paint}"/>
+    <path d="${arcBand(P, 0, 0.3265, 0.385, 0.33, 0.22, 58, 198, k)}" fill="${paint}" stroke="${edge}" stroke-width="1.2"/>
+    <path d="${arcBand(P, 1.625, 0.32, 0.356, 0.21, 0.30, 8, 150, k)}" fill="${paint}" stroke="${edge}" stroke-width="1.2"/>
+    <path d="M ${P(0.81, 0.84).map(f1).join(' ')} Q ${P(0.62, 0.69).map(f1).join(' ')} ${P(0.40, 0.72).map(f1).join(' ')} Q ${P(0.33, 0.80).map(f1).join(' ')} ${P(0.25, 0.81).map(f1).join(' ')} L ${P(-0.06, 0.80).map(f1).join(' ')} Q ${P(-0.14, 0.79).map(f1).join(' ')} ${P(-0.13, 0.72).map(f1).join(' ')} L ${P(0.70, 0.72).map(f1).join(' ')} Z" fill="#17130f"/>
+    <path d="M ${P(0.70, 0.81).map(f1).join(' ')} Q ${P(0.84, 1.0).map(f1).join(' ')} ${P(1.08, 1.01).map(f1).join(' ')} Q ${P(1.27, 1.0).map(f1).join(' ')} ${P(1.27, 0.86).map(f1).join(' ')} Q ${P(1.15, 0.79).map(f1).join(' ')} ${P(0.90, 0.79).map(f1).join(' ')} Z" fill="${paint}" stroke="${edge}" stroke-width="1.2"/>
+    <path d="M ${P(0.86, 0.95).map(f1).join(' ')} Q ${P(1.0, 1.0).map(f1).join(' ')} ${P(1.16, 0.99).map(f1).join(' ')}" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="2"/>
+    <path d="M ${P(1.165, 0.56).map(f1).join(' ')} Q ${P(1.30, 0.40).map(f1).join(' ')} ${P(1.10, 0.21).map(f1).join(' ')} L ${P(-0.25, 0.265).map(f1).join(' ')}" fill="none" stroke="url(#${ids.rim})" stroke-width="8" stroke-linecap="round"/>
+    <path d="M ${P(0.73, 0.56).map(f1).join(' ')} Q ${P(0.55, 0.42).map(f1).join(' ')} ${P(0.30, 0.40).map(f1).join(' ')} L ${P(-0.31, 0.398).map(f1).join(' ')}" fill="none" stroke="url(#${ids.rim})" stroke-width="8" stroke-linecap="round"/>
+    <path d="${line(P, [[0.98, 0.30], [1.30, 0.30]])}" stroke="#101113" stroke-width="6" stroke-linecap="round"/>
+    <path d="${line(P, [[1.625, 0.32], [1.20, 0.99]])}" stroke="url(#${ids.spoke})" stroke-width="8" stroke-linecap="round"/>
+    <path d="${line(P, [[1.18, 1.0], [1.18, 1.09], [0.95, 1.10]])}" fill="none" stroke="url(#${ids.rim})" stroke-width="4" stroke-linejoin="round"/>
+    <path d="${line(P, [[0.99, 1.10], [0.93, 1.10]])}" stroke="#101113" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="${f1(P(1.37, 0.905)[0])}" cy="${f1(P(1.37, 0.905)[1])}" r="18" fill="url(#${ids.rim})"/>
+    <path d="M ${P(1.40, 0.99).map(f1).join(' ')} A 17 17 0 0 1 ${P(1.40, 0.82).map(f1).join(' ')} Z" fill="#eef6ff"/>
+    <circle cx="${f1(P(1.42, 0.80)[0])}" cy="${f1(P(1.42, 0.80)[1])}" r="4" fill="#ffa21a"/>
+    <path d="${poly(P, [[-0.36, 0.58], [-0.30, 0.60], [-0.31, 0.55], [-0.37, 0.53]])}" fill="#b3121b"/>`;
+  return { parts, wheels: spokeWheel(rx, ry, r, ids) + spokeWheel(fx, fy, r * 0.985, ids), ground: 240, w: [rx, fx], r };
+}
+function powersportSvg(type, color, { label = '', reflection = true, cls = '' } = {}) {
+  const u = `c${++uidN}`;
+  const ids = { body: `${u}b`, rim: `${u}r`, spoke: `${u}s`, car: `${u}car`, fade: `${u}f`, glare: `${u}gl` };
+  const art = powersportArt(MOTO.has(type) ? 'cruiser' : type, color, ids);
+  const g = art.ground;
+  return `<svg class="car-art car-${type} ${cls}" viewBox="0 0 600 300" role="img" aria-label="${label.replace(/"/g, '&quot;')}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="${ids.body}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${lighten(color, 0.38)}"/><stop offset=".45" stop-color="${color}"/><stop offset="1" stop-color="${darken(color, 0.45)}"/>
+    </linearGradient>
+    <radialGradient id="${ids.rim}" cx=".4" cy=".35" r=".8">
+      <stop offset="0" stop-color="#f3f6f9"/><stop offset=".55" stop-color="#a9b1bb"/><stop offset="1" stop-color="#5b626b"/>
+    </radialGradient>
+    <linearGradient id="${ids.spoke}" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8c949e"/><stop offset=".5" stop-color="#e9edf2"/><stop offset="1" stop-color="#7d858f"/>
+    </linearGradient>
+    <linearGradient id="${ids.fade}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".5"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="${ids.glare}"><rect x="0" y="${g}" width="600" height="${300 - g}" fill="url(#${ids.fade})"/></mask>
+  </defs>
+  <ellipse cx="300" cy="${g + 2}" rx="250" ry="10" fill="#000" opacity=".55"/>
+  ${art.w.map(x => `<ellipse cx="${f1(x)}" cy="${g}" rx="${f1(art.r + 6)}" ry="5" fill="#000" opacity=".6"/>`).join('')}
+  <g id="${ids.car}">${art.parts}${art.wheels}</g>
+  ${reflection ? `<g mask="url(#${ids.glare})" opacity=".8"><use href="#${ids.car}" transform="translate(0 ${2 * g + 2}) scale(1 -1)"/></g>` : ''}
+</svg>`;
+}
 
 function wheel(cx, cy, r, ids) {
   const spokes = [];
@@ -133,6 +291,7 @@ function wheel(cx, cy, r, ids) {
 const ALIASES = { van: 'minivan', truck: 'pickup', crossover: 'suv', wagon: 'hatchback', hatch: 'hatchback' };
 
 export function carSvg(type, color = '#8a8f98', { label = '', reflection = true, cls = '' } = {}) {
+  if (MOTO.has(type) || type === 'utv' || type === 'atv') return powersportSvg(type, color, { label, reflection, cls });
   type = SHAPES[type] ? type : ALIASES[type] || 'sedan';
   const s = SHAPES[type];
   const u = `c${++uidN}`;
@@ -158,8 +317,8 @@ export function carSvg(type, color = '#8a8f98', { label = '', reflection = true,
       </g>
       <path d="${s.glass}" fill="url(#${ids.glass})"/>
       <g clip-path="url(#${ids.mask})">
-        <path d="M 0 140 L 140 0 L 175 0 L 35 140 Z" fill="#fff" opacity=".10" transform="translate(${type === 'pickup' ? 250 : 120} 0)"/>
-        <path d="M 0 140 L 140 0 L 152 0 L 12 140 Z" fill="#fff" opacity=".08" transform="translate(${type === 'pickup' ? 300 : 190} 0)"/>
+        <path d="M 0 140 L 140 0 L 175 0 L 35 140 Z" fill="#fff" opacity=".10" transform="translate(${type === 'pickup' || type === 'suv' ? 250 : 120} 0)"/>
+        <path d="M 0 140 L 140 0 L 152 0 L 12 140 Z" fill="#fff" opacity=".08" transform="translate(${type === 'pickup' || type === 'suv' ? 300 : 190} 0)"/>
       </g>
       ${s.pillars.map(p => `<path d="${p}" fill="${darken(color, 0.25)}"/>`).join('')}
       ${s.rail ? `<path d="${s.rail}" fill="#22262b"/>` : ''}
@@ -210,4 +369,8 @@ export function carSvg(type, color = '#8a8f98', { label = '', reflection = true,
 </svg>`;
 }
 
-export const BODY_LABELS = { sedan: 'Sedan', coupe: 'Coupe', hatchback: 'Hatchback', minivan: 'Minivan', suv: 'SUV', pickup: 'Pickup' };
+export const BODY_LABELS = {
+  sedan: 'Sedan', coupe: 'Coupe', hatchback: 'Hatchback', minivan: 'Minivan', suv: 'SUV', pickup: 'Pickup',
+  cruiser: 'Cruiser motorcycle', sport: 'Sport motorcycle', dualsport: 'Dual-sport motorcycle', scooter: 'Scooter',
+  utv: 'Side-by-side (UTV)', atv: 'ATV',
+};

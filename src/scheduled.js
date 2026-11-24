@@ -2,12 +2,14 @@
 // Every run: research queue sweep (stuck jobs requeued / failed -> announced once) and emailed-receipt notices.
 // At NOTIFY_HOUR local time (default 8): the daily "what's due" reminder (each item at most once a week unless its
 // status changes) and the Home Assistant due sensor. On the 1st of the month at that hour: the monthly mileage check
-// (one notification per car, linking to its odometer box) - this replaces the HA actionable-notification version.
+// (one notification per vehicle, linking to its odometer box, or its hours box for UTVs / ATVs) - this replaces the HA
+// actionable-notification version.
 import { dueList } from './api.js';
 import { absUrl, enabled, firstTime, haSetDueSensor, notify } from './notify.js';
 import { announceFailures, sweepStale } from './research-jobs.js';
 import { markNotified, unnotified } from './receipts.js';
 import { TZ } from './util.js';
+import { usesHours } from './vehicle.js';
 
 function localParts(d) {
   const f = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' });
@@ -42,14 +44,23 @@ export async function dueReminder(env) {
 }
 
 export async function mileageCheck(env, ym) {
-  const { results: cars } = await env.DB.prepare('SELECT id, nickname, mileage FROM cars WHERE archived = 0 ORDER BY sort_order').all();
+  const { results: cars } = await env.DB.prepare('SELECT id, nickname, mileage, hours, vehicle_type, body_type FROM cars WHERE archived = 0 ORDER BY sort_order').all();
   let n = 0;
   for (const c of cars) {
     if (!(await firstTime(env, `mileage:${ym}:${c.id}`, 20 * 86400))) continue;
+    // UTVs / ATVs (and anything with an hour meter reading) are asked for their engine hours instead of the odometer.
     // Home Assistant: an actionable notification with a text box; an HA automation posts the reply to /api/ha/mileage
-    // (docs/integrations.md#home-assistant). Other channels: tap -> the car's odometer box.
-    const haData = env.HA_MILEAGE_TOKEN ? { actions: [{ action: `GARAGE_MI_${c.id}`, title: 'Enter mileage', behavior: 'textInput', textInputButtonTitle: 'Save', textInputPlaceholder: 'Odometer' }, { action: 'URI', title: 'Open in the app', uri: absUrl(env, `#/car/${c.id}/mileage`) }] } : null;
-    await notify(env, { kind: 'mileage', title: `${env.APP_NAME || 'Garage'}: monthly mileage check (${c.nickname})`, body: `What's the ${c.nickname}'s odometer now? Last reading ${c.mileage != null ? c.mileage.toLocaleString('en-US') : 'unknown'}. Tap to update.`, url: `#/car/${c.id}/mileage`, haData });
+    // (docs/integrations.md#home-assistant; GARAGE_HR_ = hours). Other channels: tap -> the car's odometer / hours box.
+    const hrs = usesHours(c);
+    const what = hrs ? 'hours' : 'mileage';
+    const haData = env.HA_MILEAGE_TOKEN ? { actions: [hrs
+      ? { action: `GARAGE_HR_${c.id}`, title: 'Enter hours', behavior: 'textInput', textInputButtonTitle: 'Save', textInputPlaceholder: 'Hour meter' }
+      : { action: `GARAGE_MI_${c.id}`, title: 'Enter mileage', behavior: 'textInput', textInputButtonTitle: 'Save', textInputPlaceholder: 'Odometer' },
+    { action: 'URI', title: 'Open in the app', uri: absUrl(env, `#/car/${c.id}/${what}`) }] } : null;
+    const body = hrs
+      ? `What's the ${c.nickname}'s hour meter now? Last reading ${c.hours != null ? `${c.hours} h` : 'unknown'}. Tap to update.`
+      : `What's the ${c.nickname}'s odometer now? Last reading ${c.mileage != null ? c.mileage.toLocaleString('en-US') : 'unknown'}. Tap to update.`;
+    await notify(env, { kind: 'mileage', title: `${env.APP_NAME || 'Garage'}: monthly ${hrs ? 'engine hours' : 'mileage'} check (${c.nickname})`, body, url: `#/car/${c.id}/${what}`, haData });
     n++;
   }
   return n;

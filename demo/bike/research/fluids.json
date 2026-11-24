@@ -1,0 +1,54 @@
+[
+ {
+  "fluid": "Engine oil (with filter)",
+  "buy": "4-stroke MOTORCYCLE oil, JASO MA/MA2, API SG+. Yamalube 10W-40 or 20W-40 (Yamaha chart: 20W-40 above ~32F, 10W-30 below). Filter HiFlo HF145 / K&N KN-145",
+  "example": "Yamalube 10W-40 or 20W-40; filter HiFlo HF145",
+  "amount": "2.96 US qt",
+  "liters": "2.8 L",
+  "amount_label": "with filter",
+  "total": "2.75 US qt",
+  "total_liters": "2.6 L",
+  "total_label": "oil only (no filter)",
+  "notes": "WET CLUTCH: engine, transmission and clutch share this oil. Look for JASO MA on the bottle. Do NOT use 'Energy Conserving' car oil; its friction modifiers can make the clutch slip. Check the level with the bike upright. Total/dry capacity not found.",
+  "source": "2011 V Star 650 Custom owner's manual (search snippet); viscosity chart secondhand",
+  "verify": true
+ },
+ {
+  "fluid": "Final gear oil (shaft drive)",
+  "buy": "Hypoid gear oil SAE 80 API GL-4 (SAE 80W-90 GL-4 also listed)",
+  "example": "Yamalube shaft drive / hypoid gear oil 80W-90",
+  "amount": "About 0.2 US qt",
+  "liters": "0.19 L",
+  "notes": "Fill to the bottom of the filler-plug threads. New drain/filler gaskets. Check the drain plug magnet for metal.",
+  "source": "2002/2003 V Star Custom owner's manual snippet",
+  "verify": true
+ },
+ {
+  "fluid": "Fork oil",
+  "buy": "Yamaha fork oil 10W or equivalent",
+  "example": "Yamaha 10W fork oil",
+  "amount": "454 cc (15.3 US oz) per leg",
+  "liters": "0.454 L per leg",
+  "notes": "Oil level 114 mm (4.49 in), measured per the service manual procedure. Figures come from a garbled XVS650 service-manual page; confirm in the FSM for your year.",
+  "source": "manualslib XVS650 service manual p.356 (unverified)",
+  "verify": true
+ },
+ {
+  "fluid": "Brake fluid",
+  "buy": "DOT 4",
+  "example": "Yamaha DOT 4 or any sealed DOT 4",
+  "amount": "Top up to the reservoir mark",
+  "liters": "",
+  "notes": "Front master cylinder (and rear if your variant has a rear disc; Silverado/Classic may have a rear drum, verify). Flush every 2 years (typical). Damages paint.",
+  "verify": true
+ },
+ {
+  "fluid": "Fuel",
+  "buy": "Unleaded regular, 87 AKI (pump octane) or higher",
+  "example": "",
+  "amount": "Tank about 4.2 US gal (16 L), verify",
+  "liters": "",
+  "notes": "Ethanol (E10) is OK but varnishes carbs in storage: add stabilizer and run it through, or drain the float bowls. Avoid E15/E85. Air-cooled: no coolant.",
+  "verify": true
+ }
+]

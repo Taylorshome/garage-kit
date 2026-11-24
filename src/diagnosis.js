@@ -11,6 +11,8 @@ import { AI_OFF_MESSAGE, aiOff } from './ai.js';
 import { robustAnswer, logAnswer } from './answer.js';
 import { carContext, systemPrompt } from './mechanic.js';
 import { createTodo } from './ops.js';
+import { isMotorcycle, isOffroad, noun, typeOf } from './vehicle.js';
+import { GENERIC_PLANS } from './generic-plans.js';
 
 export const AI_WARNING = 'AI-generated, check before trusting';
 export const EFFECTS = ['confirm', 'up', 'down', 'rule_out'];
@@ -186,8 +188,12 @@ export function matchOption(stepIn, input) {
 }
 
 // ---------------------------------------------------------------------------- plan matching
-const carMatch = (plan, car) => plan.car_id === car.id || (plan.vehicle && Number(plan.vehicle.year) === Number(car.year)
-  && norm(plan.vehicle.make) === norm(car.make) && norm(plan.vehicle.model) === norm(car.model));
+// a plan matches the vehicle it was built for, any vehicle with the same year/make/model, and generic plans
+// (car_id null, vehicle.type only, e.g. the UTV CVT-belt and overheating plans) match every vehicle of that type
+const carMatch = (plan, car) => plan.car_id === car.id || (plan.vehicle && plan.vehicle.year != null && Number(plan.vehicle.year) === Number(car.year)
+  && norm(plan.vehicle.make) === norm(car.make) && norm(plan.vehicle.model) === norm(car.model))
+  || (!plan.car_id && plan.vehicle?.type && plan.vehicle.year == null && (Array.isArray(plan.vehicle.type) ? plan.vehicle.type : [plan.vehicle.type]).includes(typeOf(car)));
+export { carMatch };
 
 /** Plans for this car ranked against the symptom text. Returns [{ plan, score }] best first (score 0..~2). */
 export function rankPlans(plans, car, symptom) {
@@ -209,8 +215,13 @@ export const MATCH_MIN = 0.6;
 // ---------------------------------------------------------------------------- DB
 export async function loadPlans(env) {
   const { results } = await env.DB.prepare("SELECT id, car_id, version, source, data FROM diag_plans WHERE status = 'active'").all();
-  return results.map(r => ({ ...normalizePlan(JSON.parse(r.data)), id: r.id, car_id: r.car_id, version: r.version, source: r.source }));
+  const db = results.map(r => ({ ...normalizePlan(JSON.parse(r.data)), id: r.id, car_id: r.car_id, version: r.version, source: r.source }));
+  // built-in per-type plans (src/generic-plans.js), unless the database has a plan with the same id
+  const ids = new Set(results.map(r => r.id));
+  return [...db, ...builtinPlans().filter(p => !ids.has(p.id))];
 }
+let BUILTIN = null;
+export const builtinPlans = () => (BUILTIN ||= GENERIC_PLANS.map(p => ({ ...normalizePlan(p), id: p.id, car_id: null, version: p.version || 1, source: 'research' })));
 export async function plansForCar(env, car) {
   return (await loadPlans(env)).filter(p => carMatch(p, car));
 }
@@ -416,9 +427,9 @@ function resolveStep(plan, ref, current) {
 }
 
 // ---------------------------------------------------------------------------- finishing
-async function partsFor(env, plan, cause) {
+async function partsFor(env, plan, cause, carId = null) {
   if (!cause?.parts?.length) return [];
-  const srcCar = plan.car_id || null;
+  const srcCar = plan.car_id || carId || null;   // generic (per-type) plans use the session's vehicle's parts
   const pg = srcCar && await env.DB.prepare('SELECT data FROM parts_guides WHERE car_id = ?1').bind(srcCar).first();
   const parts = pg ? JSON.parse(pg.data).parts || [] : [];
   const { results: brands } = srcCar ? await env.DB.prepare('SELECT part, matched_part, data FROM brands WHERE car_id = ?1').bind(srcCar).all() : { results: [] };
@@ -459,7 +470,7 @@ export async function finishDiagnosis(env, id, input, member, createService) {
   let view = await sessionView(env, s.id);
   const foundId = s.status !== 'active' ? s.found_cause : st.found?.cause || st.ranking.find(c => c.status === 'confirmed')?.id || null;
   const cause = plan.causes.find(c => c.id === foundId) || null;
-  const parts = await partsFor(env, plan, cause);
+  const parts = await partsFor(env, plan, cause, s.car_id);
   const { hits: related, all: openTodos } = await relatedTodos(env, s.car_id, plan, s.todo_id);
   const proposal = cause ? {
     title: `Fix: ${cause.name}`.slice(0, 200),
@@ -592,14 +603,26 @@ export function shapeGenerated(raw, car, symptom, contextText) {
 
 // The household's tools (garage.config.json "my_tools" -> var OWNER_TOOLS), so generated plans only ask for what they have.
 let OWNER_TOOLS = 'basic hand tools, a flashlight, jack and jack stands; maybe a multimeter and an OBD-II code reader (ask before relying on them)';
-export function setOwnerTools(t) { if (t && String(t).trim()) OWNER_TOOLS = String(t).trim().slice(0, 400); }
-const GEN_PROMPT = (car, symptom) => `Write a guided diagnosis plan for this symptom on the ${car.year} ${car.make} ${car.model} ("${car.nickname}"): """${symptom}"""
+let OWNER_TOOLS_SET = false;
+export function setOwnerTools(t) { if (t && String(t).trim()) { OWNER_TOOLS = String(t).trim().slice(0, 400); OWNER_TOOLS_SET = true; } }
+// without a configured tool list, assume what a typical owner of that kind of vehicle has
+const TOOLS_TEXT = car => OWNER_TOOLS_SET ? OWNER_TOOLS : isMotorcycle(car)
+  ? 'basic metric hand tools, a flashlight, a tire pressure gauge and a rear stand or jack; maybe a multimeter and a battery charger/maintainer (ask before relying on them). No OBD scanner (most older bikes have none), no carb sync tool unless the plan says to borrow one'
+  : isOffroad(car)
+  ? 'basic metric hand tools, a flashlight, a tire pressure gauge, a floor jack and stands; maybe a multimeter and a battery charger/maintainer (ask before relying on them). A dealer-type diagnostic tool is NOT available'
+  : OWNER_TOOLS;
+const SAFETY_TEXT = car => isMotorcycle(car)
+  ? 'bike secured on its center stand / a rear stand (not the side stand when wheels come off or it is run in gear), hot exhaust pipes and engine, fuel and battery hazards, brakes being safety-critical'
+  : isOffroad(car)
+  ? 'parking brake / in park and wheels chocked, never run it with the CVT cover off, hot exhaust and CVT, fans that start with the key on, jack stands, fuel and battery hazards'
+  : 'hot cooling system under pressure, fans that start with the key on, jack stands, battery, airbags';
+const GEN_PROMPT = (car, symptom) => `Write a guided diagnosis plan for this symptom on the ${car.year} ${car.make} ${car.model} ("${car.nickname}", a ${noun(car)}): """${symptom}"""
 
-The owner will do it themselves at the car, one check at a time. Their tools: ${OWNER_TOOLS}.
+The owner will do it themselves at the ${noun(car)}, one check at a time. Their tools: ${TOOLS_TEXT(car)}.
 
 Rules:
 - 4 to 8 steps, cheapest and most likely first, based on the research above (known issues, TSBs, symptom checklists). Mark anything not from the research as general knowledge in the step text.
-- Each step: plain-language instructions for doing it at the car, tools, minutes, safety notes (hot cooling system under pressure, fans that start with the key on, jack stands, battery, airbags) whenever relevant, what to look for, and 2-5 result options.
+- Each step: plain-language instructions for doing it at the ${noun(car)}, tools, minutes, safety notes (${SAFETY_TEXT(car)}) whenever relevant, what to look for, and 2-5 result options.
 - Each option: key (snake_case), label (short, what they'd see), means (one or two sentences: what it means), effects on causes ({cause_id: "confirm" | "up" | "down" | "rule_out"}), and only when that result really settles it (a direct observation of the fault, not a hint): "found": cause_id plus "confidence": "medium". Early listening/classifying steps never end the diagnosis.
 - sources: only URLs that appear in the research above; [] if none fit.
 - Don't invent part numbers or torque specs.

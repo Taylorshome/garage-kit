@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 // End-to-end check against a LOCAL `wrangler dev` or a local Docker container (never your deployed garage): sign-in, add a car (VIN decode via the
 // public NHTSA API), maintenance / due / catch-up / log, a symptom with the first-checks note (mock AI), the 3D model
-// upload, and the MCP server with the full OAuth flow (DCR, PKCE, consent through the same sign-in) and its tools.
+// upload, the MCP server with the full OAuth flow (DCR, PKCE, consent through the same sign-in) and its tools, and
+// vehicle types (the demo bike and UTV, a new bike and UTV, engine hours moving a due item, a UTV diagnosis).
 // Setup (see docs/development.md):
 //   node scripts/configure.mjs --local --mock-ai && npx wrangler d1 migrations apply DB --local
+//   node scripts/seed-demo.mjs --bike --utv
 //   GARAGE_PASSWORD=... node scripts/secrets.mjs --local && npx wrangler dev --port 8787
 //   GARAGE_PASSWORD=... node scripts/e2e-local.mjs                 (password mode)
 //   node scripts/e2e-local.mjs --none                              (after configure --local --mock-ai --mode=none)
@@ -102,6 +104,39 @@ r = await api(`/api/cars/${carId}/model`, { method: 'POST', raw: { type: 'model/
 ok('non-glb refused', r.status === 415);
 r = await api(`/api/cars/${carId}/model`, { method: 'DELETE' }); ok('remove .glb', r.status === 200);
 
+// ---------------------------------------------------------------- vehicle types (web API): demo bike + UTV, a new bike and UTV, hours
+const today = new Date().toISOString().slice(0, 10);
+r = await api('/api/cars/car-demo-bike');
+const bike = r.data;
+ok('demo bike (seed-demo --bike): a motorcycle with "needs info"', r.status === 200 && bike.car.nickname === 'V Star' && bike.car.vehicle_type === 'motorcycle' && bike.car.body_type === 'cruiser' && bike.car.needs_info.some(n => n.field === 'vin'), r.status === 200 ? `${bike.car.nickname}, needs ${bike.car.needs_info.map(n => n.field)}` : 'seed with: node scripts/seed-demo.mjs --bike --utv');
+ok('demo bike: JASO MA/MA2 wet-clutch flag on the oil row', bike?.fluids?.[0]?.jaso === 'MA/MA2' && /energy-conserving/.test(bike.fluids[0].warning || ''), bike?.fluids?.[0]?.fluid);
+ok('demo bike: researched shaft-drive schedule, bike parts stores', !!bike?.items?.some(i => /Final gear oil: change/.test(i.name) && i.source === 'manual') && /Partzilla/.test(bike.parts_sources?.online || ''), `${bike?.items?.length} items`);
+r = await api('/api/cars/car-demo-utv');
+const dutv = r.data;
+const dOil = dutv?.items?.find(i => i.name === 'Engine oil & filter');
+ok('demo UTV (seed-demo --utv): hours, oil due by hours (150 h)', r.status === 200 && dutv.car.uses_hours && dutv.car.hours === 142.5 && dOil?.next_due_hours === 150 && dOil.status === 'ok', dOil?.label);
+r = await api('/api/cars/car-demo-utv/diagnoses');
+ok('demo UTV: the built-in CVT-belt and overheating plans are offered', ['utv-cvt-belt-slip', 'utv-overheating'].every(id => JSON.stringify(r.data).includes(id)), r.status);
+r = await api('/api/cars', { method: 'POST', body: { nickname: `E2E bike ${TRUCK.slice(-6)}`, year: 2019, make: 'Kawasaki', model: 'Ninja 650', vehicle_type: 'motorcycle', body_type: 'sport', mileage: 8200, attrs: { final_drive: 'chain', cooling: 'liquid', fuel_system: 'efi', clutch: 'wet' }, default_schedule: true } });
+const bikeId = r.data.id;
+r = await api(`/api/cars/${bikeId}`);
+const bnames = (r.data.items || []).map(i => i.name).join(' | ');
+ok('add a bike: chain + liquid-cooled + EFI starter schedule, no car items', /Chain clean/.test(bnames) && /Coolant/.test(bnames) && !/Carburetor|Cabin|Tire rotation/.test(bnames) && /Tire age/.test(bnames), `${r.data.items?.length} items`);
+ok('add a bike: date-only tire age item (60 months, no miles)', r.data.items?.some(i => /Tire age/.test(i.name) && i.interval_months === 60 && i.interval_miles == null));
+r = await api('/api/cars', { method: 'POST', body: { nickname: `E2E UTV ${TRUCK.slice(-6)}`, year: 2021, make: 'Can-Am', model: 'Maverick X3', vehicle_type: 'utv', mileage: 900, hours: 96, default_schedule: true } });
+const utvId = r.data.id;
+r = await api(`/api/cars/${utvId}`);
+let uOil = r.data.items?.find(i => i.name === 'Engine oil & filter');
+ok('add a UTV: starter schedule by hours (oil 50 h)', r.data.car.vehicle_type === 'utv' && r.data.car.body_type === 'utv' && uOil?.interval_hours === 50 && r.data.car.hours === 96, `${r.data.items?.length} items`);
+r = await api(`/api/cars/${utvId}/services`, { method: 'POST', body: { title: 'Oil & filter change', date: today, hours: 100, mileage: 950, item_ids: [uOil.id], diy: true } });
+r = await api(`/api/cars/${utvId}`); uOil = r.data.items.find(i => i.id === uOil.id);
+ok('log a service at 100 h: oil next due at 150 h, hours bumped', uOil.last_done_hours === 100 && uOil.next_due_hours === 150 && uOil.status === 'ok' && r.data.car.hours === 100, uOil.label);
+r = await api(`/api/cars/${utvId}/hours`, { method: 'POST', body: { hours: '146.5' } });
+r = await api(`/api/cars/${utvId}`); uOil = r.data.items.find(i => i.id === uOil.id);
+ok('Update hours to 146.5 h: oil is due soon (3.5 h left)', r.data.car.hours === 146.5 && uOil.status === 'soon' && uOil.hours_left === 3.5, uOil.label);
+r = await api('/api/due');
+ok('due list carries the hours item', r.data.items?.some(i => i.item_id === uOil.id && i.status === 'soon'), r.data.cars?.find(c => c.id === utvId)?.hours);
+
 // ---------------------------------------------------------------- MCP + OAuth
 r = await fetch(`${BASE}/mcp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' });
 ok('unauthenticated /mcp -> 401 + resource metadata', r.status === 401 && /resource_metadata=/.test(r.headers.get('www-authenticate') || ''));
@@ -183,6 +218,35 @@ await T('guided diagnosis: start -> answer -> found -> finish (history) -> fix t
   const list = await tool('list_diagnoses', { car: 'demo' });
   return [found && v.status === 'found' && !!v.service_id && fix.fix_todo_created && list.sessions?.[0]?.status === 'found', v.conclusion];
 });
+await T('list_cars: types and engine hours', async () => { const c = await tool('list_cars'); const u = c.cars.find(x => x.id === utvId), b = c.cars.find(x => x.id === 'car-demo-bike'); return [u?.type === 'side-by-side' && u.hours === 146.5 && b?.type === 'motorcycle' && b.needs_info?.includes('VIN'), `${u?.type} ${u?.hours} h; ${b?.type}`]; });
+await T('get_fluids flags JASO MA/MA2 for the wet-clutch bike ("vstar" resolves loosely)', async () => { const f = await tool('get_fluids', { car: 'vstar' }); return [f.fluids[0].jaso === 'MA/MA2' && /clutch slip/.test(f.fluids[0].warning), f.fluids[0].buy?.slice(0, 50)]; });
+await T('update_hours (add_hours) -> the oil item goes overdue', async () => {
+  const x = await tool('update_hours', { car: `E2E UTV ${TRUCK.slice(-6)}`, add_hours: 4 });
+  const c = (await api(`/api/cars/${utvId}`)).data, it = c.items.find(i => i.name === 'Engine oil & filter');
+  const low = await rpc('tools/call', { name: 'update_hours', arguments: { car: `E2E UTV ${TRUCK.slice(-6)}`, hours: 10 } });
+  return [x.hours === 150.5 && it.status === 'overdue' && low.result?.isError === true, `${it.label}; lower reading refused`];
+});
+await T('log_service with hours marks the oil done by hours', async () => {
+  const x = await tool('log_service', { car: `E2E UTV ${TRUCK.slice(-6)}`, date: today, hours: 151, title: 'Oil & filter change', schedule_items: ['Engine oil & filter'] });
+  const it = (await api(`/api/cars/${utvId}`)).data.items.find(i => i.name === 'Engine oil & filter');
+  return [x.marked_done >= 1 && it.last_done_hours === 151 && it.next_due_hours === 201 && it.status === 'ok', it.label];
+});
+await T('add_car (MCP): an ATV with hours and its hours schedule', async () => {
+  const c = await tool('add_car', { nickname: `E2E ATV ${TRUCK.slice(-6)}`, year: 2022, make: 'Polaris', model: 'Sportsman 570', vehicle_type: 'atv', hours: 40, color: '#2f5a3a' });
+  const d = (await api(`/api/cars/${c.id}`)).data;
+  await api(`/api/cars/${c.id}`, { method: 'DELETE' });
+  return [d.car.body_type === 'atv' && d.items.find(i => i.name === 'Engine oil & filter')?.interval_hours === 100, `${d.items.length} items`];
+});
+await T('UTV guided diagnosis via MCP: "the side by side" + burning belt -> the built-in CVT plan', async () => {
+  let v = await tool('start_diagnosis', { car: 'the RZR', symptom: 'burning belt smell and it slips on hills', fresh: true });
+  const plan = v.plan?.id || v.plan_id;
+  const first = v.step?.id || v.current_step?.id;
+  v = await tool('record_check_result', { session: v.session_id, result: '1' });
+  const g = await tool('get_diagnosis', { session: v.session_id });
+  const f = await tool('finish_diagnosis', { session: v.session_id, status: 'abandoned' });
+  return [plan === 'utv-cvt-belt-slip' && !!first && g.progress?.answered === 1 && g.history?.length === 1 && f.status === 'abandoned', `${plan}: ${first} -> ${g.progress?.text}`];
+});
+await T('get_recalls: UTVs go to the CPSC (fails soft with the cpsc.gov link)', async () => { const x = await tool('get_recalls', { car: 'RZR' }); return [x.source === 'CPSC' && Array.isArray(x.results) && /cpsc\.gov/.test(x.cpsc_search), x.error || `${x.results.length} found for "${x.query}"`]; });
 await T('log_service marks schedule items done', async () => { const x = await tool('log_service', { car: TRUCK, date: new Date().toISOString().slice(0, 10), mileage: 150200, title: 'Oil change', schedule_items: ['oil'] }); return [x.marked_done === 1, JSON.stringify(x).slice(0, 80)]; });
 await T('update_mileage', async () => { const x = await tool('update_mileage', { car: TRUCK, mileage: 150500 }); return [x.mileage === 150500, x.mileage]; });
 await T('add_receipt (fields) -> confirm_receipt', async () => {
@@ -209,7 +273,7 @@ r = await fetch(`${BASE}/api/health/alert`, { method: 'POST', headers: { Authori
 ok('health alert endpoint needs the worker token', r.status === 401);
 
 // cleanup of the test cars (local DB anyway)
-for (const id of [carId, mcpCar].filter(Boolean)) await api(`/api/cars/${id}`, { method: 'DELETE' });
+for (const id of [carId, mcpCar, bikeId, utvId].filter(Boolean)) await api(`/api/cars/${id}`, { method: 'DELETE' });
 const failed = results.filter(x => !x).length;
 console.log(`\n${results.length - failed}/${results.length} passed${failed ? `, ${failed} FAILED` : ''}`);
 process.exit(failed ? 1 : 0);

@@ -2,7 +2,9 @@
 // Auth happens before this handler (OAuthProvider): ctx.props = { member_id, name, client }.
 // Every write is attributed to the member ("<name> via <client>") exactly like the web UI.
 import { carFull, createCar, createService, decodeVin, dueList, garageOverview, upsertScheduleItem } from './api.js';
-import { KINDS, WHENS, WHERES, createSymptom, createTodo, itemIdsByName, resolveCar, searchHistory, setMileage, updateTodo } from './ops.js';
+import { KINDS, WHENS, WHERES, createSymptom, createTodo, hoursNum, itemIdsByName, resolveCar, searchHistory, setHours, setMileage, updateTodo } from './ops.js';
+import { BODY_TYPES, OFFROAD_NOTE, VEHICLE_TYPES, fluidsFor, isOffroad, noun, partsSources, usesHours } from './vehicle.js';
+import { recallsFor } from './recalls.js';
 import { HttpError, json, todayLocal } from './util.js';
 import { jobsForCar, listQueued, saveManualReport } from './research-jobs.js';
 import { saveResearchBundle } from './research-bundle.js';
@@ -14,8 +16,9 @@ import { alternatesForCar } from './alternates.js';
 import { confirmReceipt, createReceipt, discardReceipt, listPending } from './receipts.js';
 
 const SUPPORTED = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
-const serverInfo = env => ({ name: 'garage', title: `${env.APP_NAME || 'Garage'} (household cars)`, version: '2.0.0' });
-const instructions = (env, cars) => `${env.APP_NAME || 'Garage'}: a household's car maintenance app. Cars: ${cars.length ? cars.map(c => `"${c.nickname}" (${[c.year, c.make, c.model].filter(Boolean).join(' ')})`).join(', ') : 'none yet (add one with decode_vin + add_car)'}. Cars can be named loosely (nickname, model, "the truck") or by id.
+const serverInfo = env => ({ name: 'garage', title: `${env.APP_NAME || 'Garage'} (household vehicles)`, version: '2.1.0' });
+const instructions = (env, cars) => `${env.APP_NAME || 'Garage'}: a household's vehicle maintenance app (cars, trucks, vans, SUVs, and also motorcycles, side-by-sides / UTVs and ATVs). Vehicles: ${cars.length ? cars.map(c => `"${c.nickname}" (${[c.year, c.make, c.model].filter(Boolean).join(' ')})`).join(', ') : 'none yet (add one with decode_vin + add_car)'}. Vehicles can be named loosely (nickname, model, "the truck", "the bike", "the side by side") or by id. The tools say "car" for any vehicle.
+Motorcycles: a wet-clutch bike needs JASO MA/MA2 oil (get_fluids flags it: never energy-conserving car oil). UTVs/ATVs are serviced by ENGINE HOURS as well as miles and dates (whichever comes first): "oil change at 145 hours" -> log_service with hours: 145; "rode it 2 hours" / "log 2 hours" -> update_hours with add_hours: 2; "it's at 150 hours" -> update_hours with hours: 150. Off-road recalls come from the CPSC (get_recalls handles it).
 Workflow:
 - Receipt photo or "log this": read the image yourself, call add_receipt with the fields (car, date, mileage, shop, total, line_items with part numbers) plus a transcription, show the user the returned summary and ask the listed questions, then call confirm_receipt only after they say yes. Prefer this over log_service whenever there is a receipt.
 - Work done without a receipt: log_service (schedule_items marks them done). Finished a to-do: complete_todo.
@@ -27,9 +30,10 @@ Workflow:
 Read tools never change data. Dates are YYYY-MM-DD in the garage's time zone (${env.TIMEZONE || 'UTC'}).`;
 
 const S = (type, description, extra = {}) => ({ type, description, ...extra });
-const CAR = S('string', 'Car nickname or id (case-insensitive, forgiving: nickname, model, "the truck")');
+const CAR = S('string', 'Vehicle nickname or id (case-insensitive, forgiving: nickname, model, "the truck", "the bike")');
 const DATE = S('string', 'YYYY-MM-DD', { pattern: '^\\d{4}-\\d{2}-\\d{2}$' });
 const MILES = S('integer', 'Odometer miles', { minimum: 0, maximum: 2000000 });
+const HOURS = S('number', 'Engine hours (hour meter), e.g. 145.5 (UTVs / ATVs)', { minimum: 0, maximum: 100000 });
 const RO = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 const RW = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
 const LINE = { type: 'object', properties: {
@@ -43,10 +47,11 @@ const SESSION = S('string', 'Diagnosis session id (from start_diagnosis or list_
 const SECTIONS = ['specs', 'recalls', 'tsbs', 'known_issues', 'recommendations', 'symptom_diagnosis', 'schedule', 'questions', 'symptom_reports'];
 
 export const TOOLS = [
-  { name: 'list_cars', title: 'List cars', description: 'All cars: nickname, year/make/model, engine, mileage, health score (0-100), open issue count, overdue/due-soon counts and the next service due.', inputSchema: { type: 'object', properties: {} }, annotations: RO },
-  { name: 'get_car', title: 'Car details', description: 'One car: specs (trim, engine, transmission, VIN, notes), mileage, health, open to-dos and symptoms (with the mechanic\'s first-checks note), overdue and due-soon schedule items, the last 10 services and the latest scan-tool codes.', inputSchema: { type: 'object', properties: { car: CAR }, required: ['car'] }, annotations: RO },
+  { name: 'list_cars', title: 'List vehicles', description: 'All vehicles (cars, trucks, motorcycles, UTVs, ATVs): nickname, type, year/make/model, engine, mileage (and engine hours where tracked), fields still needing info, health score (0-100), open issue count, overdue/due-soon counts and the next service due.', inputSchema: { type: 'object', properties: {} }, annotations: RO },
+  { name: 'get_car', title: 'Vehicle details', description: 'One vehicle: type, specs (trim, engine, transmission, VIN, notes), mileage, health, open to-dos and symptoms (with the mechanic\'s first-checks note), overdue and due-soon schedule items, the last 10 services and the latest scan-tool codes.', inputSchema: { type: 'object', properties: { car: CAR }, required: ['car'] }, annotations: RO },
   { name: 'get_research', title: 'Researched data for a car', description: 'Researched facts for one car (owner manuals, NHTSA, TSBs, forums), plus deep web-research reports for its symptoms (symptom_reports): specs, recalls, TSBs, known issues with a mileage-window phase relative to the car (now / ahead / behind / any), recommendations (now/soon/watch/skip), symptom diagnosis checklists, researched schedule and open questions. Optional section limits the output.', inputSchema: { type: 'object', properties: { car: CAR, section: S('string', 'Optional: one section', { enum: SECTIONS }) }, required: ['car'] }, annotations: RO },
-  { name: 'get_fluids', title: 'Fluids and capacities', description: 'Fluid table for one car: what to buy (spec + example brand) and how much (quarts/pints with liters) for engine oil (with filter), coolant, transmission (drain-and-fill and total), transfer case, differentials, brake, power steering and washer fluid. verify=true marks values the research could not confirm.', inputSchema: { type: 'object', properties: { car: CAR }, required: ['car'] }, annotations: RO },
+  { name: 'get_recalls', title: 'Open recalls lookup', description: 'Looks up recalls for one vehicle online: NHTSA for cars, trucks and motorcycles (by year/make/model; the VIN check link confirms an exact vehicle), CPSC for UTVs / ATVs. Fails soft with the official search links.', inputSchema: { type: 'object', properties: { car: CAR }, required: ['car'] }, annotations: { ...RO, openWorldHint: true } },
+  { name: 'get_fluids', title: 'Fluids and capacities', description: 'Fluid table for one vehicle (motorcycles: warning = wet clutch needs JASO MA/MA2 oil; sump = shared or separate gearbox oil): what to buy (spec + example brand) and how much (quarts/pints with liters) for engine oil (with filter), coolant, transmission (drain-and-fill and total), transfer case, differentials, brake, power steering and washer fluid. verify=true marks values the research could not confirm.', inputSchema: { type: 'object', properties: { car: CAR }, required: ['car'] }, annotations: RO },
   { name: 'get_parts', title: 'Parts quick reference', description: 'Parts for one car with part numbers per brand, approximate price (with as-of date), buy links and notes (filters, ignition, belts, cooling, brakes, wipers, bulbs, battery, tires, HVAC actuators, parts for open issues). Optional category filter (substring, e.g. "brakes", "filters", "HVAC").', inputSchema: { type: 'object', properties: { car: CAR, category: S('string', 'Optional category or keyword') }, required: ['car'] }, annotations: RO },
   { name: 'get_alternates', title: 'Alternate brands per part', description: 'For one car, every part with its OEM / first-choice part number and the good alternate brands (part number, tier, approximate price, where to buy with RockAuto first, verdict, sources), plus brands to avoid. Use it to answer "instead of the ACDelco part, what else could I buy?". verify_fitment=true means the number was not confirmed for this exact vehicle and engine. Optional part filter (substring of the part or category, e.g. "oil filter", "brakes").', inputSchema: { type: 'object', properties: { car: CAR, part: S('string', 'Optional part or category keyword') }, required: ['car'] }, annotations: RO },
   { name: 'get_guides', title: 'Repair guides', description: 'Step-by-step repair/diagnosis guides for one car: difficulty, time, tools, steps, safety, videos and articles. Optional topic filter (keyword such as "overheating", "HVAC", "oil"). Also returns the scan tool and coolant pressure tester notes (if the research has them) and additive verdicts when topic is "tools" or "additives".', inputSchema: { type: 'object', properties: { car: CAR, topic: S('string', 'Optional keyword, or "tools" / "additives"') }, required: ['car'] }, annotations: RO },
@@ -57,8 +62,9 @@ export const TOOLS = [
   { name: 'add_todo', title: 'Add a to-do', description: 'Adds an open to-do for a car.', inputSchema: { type: 'object', properties: { car: CAR, title: S('string', 'What needs doing'), notes: S('string', 'Optional details'), priority: S('string', 'Default medium', { enum: ['high', 'medium', 'low'] }) }, required: ['car', 'title'] }, annotations: RW },
   { name: 'update_todo', title: 'Update a to-do', description: 'Changes a to-do: reopen/close (status), replace notes, append to notes, or change priority. Use complete_todo to finish one and log the work.', inputSchema: { type: 'object', properties: { todo_id: S('string', 'To-do id from get_car or get_due_list'), status: S('string', '', { enum: ['open', 'closed'] }), notes: S('string', 'Replaces the notes'), append_notes: S('string', 'Appended to the notes'), priority: S('string', '', { enum: ['high', 'medium', 'low'] }) }, required: ['todo_id'] }, annotations: RW },
   { name: 'complete_todo', title: 'Complete a to-do', description: 'Marks a to-do done. Optionally logs it to the service history at the same time (log_service: date, mileage, cost, shop, details).', inputSchema: { type: 'object', properties: { todo_id: S('string', 'To-do id'), log_service: { type: 'object', description: 'Optional history entry', properties: { date: DATE, mileage: MILES, cost: S('number', 'Dollars'), shop: S('string', 'Shop name; omit for DIY'), details: S('string', 'What was done') } } }, required: ['todo_id'] }, annotations: RW },
-  { name: 'log_service', title: 'Log a service', description: 'Adds a service history entry. schedule_items (names like "oil", "tire rotation", or ids) are marked done as of this date and mileage, which resets their next-due.', inputSchema: { type: 'object', properties: { car: CAR, date: DATE, mileage: MILES, title: S('string', 'What was done, e.g. "Oil & filter change"'), details: S('string', 'Optional'), cost: S('number', 'Optional dollars'), shop: S('string', 'Optional shop name; omit for DIY'), schedule_items: S('array', 'Optional schedule items this counts as', { items: { type: 'string' } }) }, required: ['car', 'date', 'title'] }, annotations: RW },
-  { name: 'update_mileage', title: 'Update mileage', description: "Sets the car's current odometer reading.", inputSchema: { type: 'object', properties: { car: CAR, mileage: MILES }, required: ['car', 'mileage'] }, annotations: { ...RW, idempotentHint: true } },
+  { name: 'log_service', title: 'Log a service', description: 'Adds a service history entry. schedule_items (names like "oil", "tire rotation", or ids) are marked done as of this date, mileage and engine hours, which resets their next-due. For UTVs/ATVs pass hours (e.g. "oil change at 145 hours" -> hours: 145).', inputSchema: { type: 'object', properties: { car: CAR, date: DATE, mileage: MILES, hours: HOURS, title: S('string', 'What was done, e.g. "Oil & filter change"'), details: S('string', 'Optional'), cost: S('number', 'Optional dollars'), shop: S('string', 'Optional shop name; omit for DIY'), schedule_items: S('array', 'Optional schedule items this counts as', { items: { type: 'string' } }) }, required: ['car', 'date', 'title'] }, annotations: RW },
+  { name: 'update_mileage', title: 'Update mileage (and/or hours)', description: "Sets the vehicle's current odometer reading, and/or its engine hours (UTVs / ATVs) if hours is given.", inputSchema: { type: 'object', properties: { car: CAR, mileage: MILES, hours: HOURS }, required: ['car'] }, annotations: { ...RW, idempotentHint: true } },
+  { name: 'update_hours', title: 'Update engine hours', description: 'Sets the engine-hour reading of a vehicle with an hour meter (UTVs / ATVs). hours = the meter reading ("it\'s at 150 hours"); add_hours = hours used since the last reading ("rode it 2 hours", "log 2 hours"). Never lowers the reading by accident: hours below the current one need allow_lower.', inputSchema: { type: 'object', properties: { car: CAR, hours: HOURS, add_hours: S('number', 'Hours to add to the current reading', { minimum: 0, maximum: 1000 }), allow_lower: S('boolean', 'Allow a lower reading (meter replaced / typo fix)') }, required: ['car'] }, annotations: RW },
   { name: 'add_receipt', title: 'Add a receipt (pending until confirmed)', description: `Turns a car receipt (shop invoice, quick-lube ticket, parts-store receipt, RockAuto order) into a PENDING receipt: a draft service entry that is NOT saved to the history until confirm_receipt.
 Usual flow: the user sends a photo and says "log this". You usually can't pass the image bytes, so READ THE PHOTO YOURSELF and send what you read:
 - fields, most important first: car, date, mileage (the odometer printed on the receipt, never the "next service due" number; omit if not printed), line_items with part numbers and amounts, total, shop; plus tax, title, kind ("parts" for a parts-store purchase).
@@ -68,6 +74,7 @@ You can send only a transcription, or (if your client allows) files with base64 
 Returns: id, a short summary to show the user (car · date · miles · shop, jobs it will mark done, total), questions to ask (e.g. mileage missing), fields to double-check, to-dos it might close, and a link to the receipt in the app. Show the summary, ask the questions, and get a clear yes before calling confirm_receipt. Sending the same receipt twice returns the existing one (duplicate: true).`, inputSchema: { type: 'object', properties: {
     car: S('string', 'Which car, loosely (nickname, model, "the truck"). Omit if the receipt does not say; the server matches by VIN / year-make-model.'),
     date: S('string', 'Receipt date, YYYY-MM-DD'), mileage: MILES, shop: S('string', 'Shop or store name'),
+    hours: HOURS,
     total: S('number', 'Total paid, dollars'), tax: S('number', 'Optional sales tax, dollars'),
     title: S('string', 'Short summary, e.g. "Oil change + tire rotation"'), kind: S('string', 'service (a shop did the work) or parts (parts bought, DIY)', { enum: ['service', 'parts'] }),
     vin: S('string', 'Optional VIN if printed'), invoice_number: S('string', 'Optional'),
@@ -80,7 +87,7 @@ Returns: id, a short summary to show the user (car · date · miles · shop, job
   } }, annotations: RW },
   { name: 'confirm_receipt', title: 'Save a pending receipt', description: 'Saves a pending receipt to the car\'s service history ONLY after the user has seen the add_receipt summary and said yes. Logs the service (cost, shop, parts, odometer), marks the schedule items done (their next-due dates recalculate), raises the car\'s mileage if higher, and attaches the receipt files. edits corrects fields first (e.g. {"mileage": 87320} or {"car": "the truck"}); edits.schedule_items replaces the jobs to mark done. close_todos: ids from todo_candidates, only those the user agreed to close.', inputSchema: { type: 'object', properties: {
     id: S('string', 'Receipt id from add_receipt or list_pending_receipts'),
-    edits: { type: 'object', description: 'Optional corrections', properties: { car: S('string', 'Car, loosely'), date: DATE, mileage: MILES, shop: S('string', ''), total: S('number', 'Dollars'), tax: S('number', 'Dollars'), title: S('string', ''), kind: S('string', '', { enum: ['service', 'parts'] }), line_items: S('array', 'Replaces all lines', { items: LINE }), schedule_items: S('array', 'Replaces the jobs to mark done (names)', { items: { type: 'string' } }), notes: S('string', '') } },
+    edits: { type: 'object', description: 'Optional corrections', properties: { car: S('string', 'Car, loosely'), date: DATE, mileage: MILES, hours: HOURS, shop: S('string', ''), total: S('number', 'Dollars'), tax: S('number', 'Dollars'), title: S('string', ''), kind: S('string', '', { enum: ['service', 'parts'] }), line_items: S('array', 'Replaces all lines', { items: LINE }), schedule_items: S('array', 'Replaces the jobs to mark done (names)', { items: { type: 'string' } }), notes: S('string', '') } },
     close_todos: S('array', 'Optional to-do ids to close (from todo_candidates), only with the user\'s OK', { items: { type: 'string' }, maxItems: 20 }),
   }, required: ['id'] }, annotations: RW },
   { name: 'list_pending_receipts', title: 'Pending receipts', description: 'Receipts waiting to be checked and saved (from the app, email or Claude), each with its summary, questions and app link.', inputSchema: { type: 'object', properties: { car: S('string', 'Optional car filter') } }, annotations: RO },
@@ -93,12 +100,14 @@ Returns step 1 (or the current step): safety notes, what to do, what to look for
   { name: 'skip_step', title: 'Skip a step for now', description: '"Can\'t do that now": skips the current step (or the given one). Skipped steps are offered again at the end. Returns the next step.', inputSchema: { type: 'object', properties: { session: SESSION, step: S('string', 'Optional step id or number'), reason: S('string', 'Optional, e.g. "no block tester yet"') }, required: ['session'] }, annotations: RW },
   { name: 'finish_diagnosis', title: 'Finish a diagnosis', description: 'Ends a session: writes a summary (checks, findings, conclusion, confidence) to the car\'s service history, adds a note to related open to-dos (never closes them; also notes causes it ruled out), and returns a proposed fix to-do with matching parts. Create that to-do only after the user says yes: call again with create_fix_todo: true (works on an already finished session, once). status defaults to found (the plan pointed to a cause) or inconclusive; abandoned if they stopped. conclusion overrides the wording.', inputSchema: { type: 'object', properties: { session: SESSION, conclusion: S('string', 'Optional conclusion in plain words'), status: S('string', 'Optional', { enum: ['found', 'inconclusive', 'abandoned'] }), create_fix_todo: S('boolean', 'Create the proposed fix to-do (only after the user agreed)') }, required: ['session'] }, annotations: RW },
   { name: 'add_shopping_item', title: 'Add to a shopping list', description: 'Adds a tool, supply or part to a car\'s shopping list (shown with get_shopping_list and in the app). Skipped if the list already has it (same name or part number).', inputSchema: { type: 'object', properties: { car: CAR, name: S('string', 'What to buy'), kind: S('string', 'Default part', { enum: ['part', 'tool', 'supply'] }), brand: S('string', 'Optional'), part_number: S('string', 'Optional'), price_usd: S('string', 'Optional approximate price'), where: S('string', 'Optional store'), url: S('string', 'Optional https link'), note: S('string', 'Optional note') }, required: ['car', 'name'] }, annotations: RW },
-  { name: 'decode_vin', title: 'Decode a VIN', description: 'Decodes a 17-character VIN with the public NHTSA vPIC API: year, make, model, trim, engine, transmission, drive, body class and a suggested body_type. Read-only.', inputSchema: { type: 'object', properties: { vin: S('string', '17-character VIN', { pattern: '^[A-HJ-NPR-Za-hj-npr-z0-9]{17}$' }) }, required: ['vin'] }, annotations: { ...RO, openWorldHint: true } },
-  { name: 'add_car', title: 'Add a car', description: 'Adds a car to the garage. body_type picks the 3D model (sedan, coupe, hatchback, minivan, suv, pickup); color is the paint (#rrggbb). starter_schedule=true adds 12 generic maintenance items marked "typical, check your owner\'s manual" (replace them with researched ones later). Ask the user before adding.', inputSchema: { type: 'object', properties: {
-    nickname: S('string', 'What the household calls it, e.g. "the Civic"'), year: S('integer', 'Model year'), make: S('string', ''), model: S('string', ''), trim: S('string', ''), engine: S('string', ''), transmission: S('string', ''),
-    vin: S('string', 'Optional 17-character VIN'), body_type: S('string', '3D body style', { enum: ['sedan', 'coupe', 'hatchback', 'minivan', 'suv', 'pickup'] }), color: S('string', 'Paint color #rrggbb'), mileage: MILES,
+  { name: 'decode_vin', title: 'Decode a VIN', description: 'Decodes a VIN with the public NHTSA vPIC API: year, make, model, trim, engine, transmission, drive, body class, a suggested vehicle_type (car, truck, van, suv, motorcycle, utv, atv) and body_type, and attrs it could tell (cooling, fuel_system). Motorcycles (vPIC VehicleType MOTORCYCLE) map automatically; UTV/ATV VINs are often only partly decoded or filed as motorcycles: confirm the type with the user. ok=false / manual=true means fill the details in by hand. Read-only.', inputSchema: { type: 'object', properties: { vin: S('string', '17-character VIN (or a partial one, * for unknown positions)', { pattern: '^[A-HJ-NPR-Za-hj-npr-z0-9*]{5,17}$' }) }, required: ['vin'] }, annotations: { ...RO, openWorldHint: true } },
+  { name: 'add_car', title: 'Add a vehicle', description: 'Adds a vehicle to the garage: a car, truck, van, SUV, motorcycle, side-by-side (utv) or ATV (vehicle_type). body_type picks the 3D model (sedan, coupe, hatchback, minivan, suv, pickup; bikes cruiser, sport, dualsport, scooter; utv; atv); color is the paint (#rrggbb). attrs (motorcycles / off-road) shape the starter schedule: final_drive chain/shaft/belt, cooling air/oil-air/liquid, fuel_system carbureted/efi, clutch wet/dry/cvt. starter_schedule=true adds the typical schedule for that type (cars 12 items; motorcycles by final drive, cooling and fuel system; UTV/ATV by miles, engine hours or months, whichever first), each marked "typical, check your owner\'s manual" (replace them with researched ones later). Ask the user before adding.', inputSchema: { type: 'object', properties: {
+    nickname: S('string', 'What the household calls it, e.g. "the Civic", "the bike"'), year: S('integer', 'Model year'), make: S('string', ''), model: S('string', ''), trim: S('string', ''), engine: S('string', ''), transmission: S('string', ''),
+    vehicle_type: S('string', 'Default car (or from body_type)', { enum: Object.keys(VEHICLE_TYPES) }),
+    vin: S('string', 'Optional 17-character VIN'), body_type: S('string', '3D body style (default: from vehicle_type)', { enum: BODY_TYPES }), color: S('string', 'Paint color #rrggbb'), mileage: MILES, hours: HOURS,
+    attrs: { type: 'object', description: 'Optional drivetrain facts (motorcycles / off-road)', properties: { final_drive: S('string', '', { enum: ['chain', 'shaft', 'belt'] }), cooling: S('string', '', { enum: ['air', 'oil-air', 'liquid'] }), fuel_system: S('string', '', { enum: ['carbureted', 'efi'] }), clutch: S('string', '', { enum: ['wet', 'dry', 'cvt'] }), shared_sump: S('boolean', 'Engine and gearbox share one oil') } },
     notes: S('string', 'Known problems or anything else worth remembering'), starter_schedule: S('boolean', 'Add the generic starter schedule (default true)') }, required: ['nickname'] }, annotations: RW },
-  { name: 'update_schedule_item', title: 'Add or change a maintenance item', description: 'Adds a maintenance schedule item to a car, or changes the one with the same name (case-insensitive): interval_miles / interval_months, notes, source ("manual" when it comes from the owner\'s manual, "typical" for common practice), severe=true for a severe-service variant. Use it to apply researched intervals.', inputSchema: { type: 'object', properties: { car: CAR, name: S('string', 'e.g. "Oil & filter change"'), interval_miles: S('integer', 'Miles between services (omit if time only)'), interval_months: S('integer', 'Months between services (omit if miles only)'), notes: S('string', 'Fluid spec, amount, source URL'), source: S('string', '', { enum: ['manual', 'typical', 'user'] }), severe: S('boolean', 'Severe-service variant') }, required: ['car', 'name'] }, annotations: RW },
+  { name: 'update_schedule_item', title: 'Add or change a maintenance item', description: 'Adds a maintenance schedule item to a car, or changes the one with the same name (case-insensitive): interval_miles / interval_hours / interval_months (due at whichever comes first; months only = a date-based item such as tire age), notes, source ("manual" when it comes from the owner\'s manual, "typical" for common practice), severe=true for a severe-service variant. Use it to apply researched intervals.', inputSchema: { type: 'object', properties: { car: CAR, name: S('string', 'e.g. "Oil & filter change"'), interval_miles: S('integer', 'Miles between services (omit if time only)'), interval_months: S('integer', 'Months between services (omit if miles only)'), interval_hours: S('number', 'Engine hours between services (UTVs / ATVs)', { minimum: 1, maximum: 10000 }), notes: S('string', 'Fluid spec, amount, source URL'), source: S('string', '', { enum: ['manual', 'typical', 'user'] }), severe: S('boolean', 'Severe-service variant') }, required: ['car', 'name'] }, annotations: RW },
   { name: 'list_research_requests', title: 'Symptoms waiting for research', description: 'Symptoms and to-dos queued for deep web research (each new symptom queues one; "Research this" in the app queues one). Research one on the web, then save the result with save_symptom_report. If the household runs the background research worker, it picks these up by itself.', inputSchema: { type: 'object', properties: {} }, annotations: RO },
   { name: 'save_symptom_report', title: 'Save a symptom research report', description: 'Saves a deep research report on one to-do / symptom (shown on the to-do in the app and used by the AI mechanic). Shape: {summary (3-5 plain sentences), likely_causes:[{cause, likelihood high|med|low, why, how_to_check, fix, diy_difficulty 1-5, cost_diy, cost_shop}], check_order:[cheapest first], safe_to_drive:{verdict yes|caution|no, why}, parts:[{name, part_numbers, approx_price, link}], videos:[{title, channel, url}], sources:[{title, url}] (at least one real URL), questions_for_owner:[]}. Only cite URLs you actually visited; leave part_numbers "" unless you saw them for this vehicle.', inputSchema: { type: 'object', properties: { todo_id: S('string', 'To-do id from get_car, get_due_list or list_research_requests'), report: { type: 'object', description: 'The report (see description)' } }, required: ['todo_id', 'report'] }, annotations: RW },
   { name: 'save_research_bundle', title: 'Save whole-car research', description: 'Loads researched data for one car in one go (what get_research / get_fluids / get_parts / get_guides return): research {vehicle, recalls, tsbs, schedule, known_issues, symptom_diagnosis, recommendations, questions} (see docs/research-schema.md in the kit), report_md (the written report), fluids [{fluid, buy, example, amount, liters, notes, source, verify}], parts_guides {parts, guides, ...}. Refuses to replace research that is already there unless overwrite=true (then it is a full replace; prefer save_research to add entries). dry_run=true shows what would change.', inputSchema: { type: 'object', properties: { car: CAR, research: { type: 'object' }, report_md: S('string', 'Markdown report, with source links'), fluids: S('array', 'Fluid table rows', { items: { type: 'object' } }), parts_guides: { type: 'object' }, overwrite: S('boolean', 'Replace existing sections (default false)'), dry_run: S('boolean', 'Preview only') }, required: ['car'] }, annotations: { ...RW, destructiveHint: true } },
@@ -123,15 +132,18 @@ async function call(env, ctx, name, a, who) {
   switch (name) {
     case 'list_cars': {
       const cars = await garageOverview(env);
-      return { today: todayLocal(), cars: cars.map(c => ({ id: c.id, nickname: c.nickname, vehicle: carLabel(c), trim: c.trim, engine: c.engine, mileage: c.mileage, health: c.summary.health, open_issues: c.summary.open_issues, overdue: c.summary.overdue_count, due_soon: c.summary.soon_count, next_due: c.summary.next_due && { item: c.summary.next_due.name, status: c.summary.next_due.label } })) };
+      return { today: todayLocal(), cars: cars.map(c => ({ id: c.id, nickname: c.nickname, type: noun(c), vehicle: carLabel(c), trim: c.trim, engine: c.engine, mileage: c.mileage,
+        ...(c.uses_hours ? { hours: c.hours } : {}), ...(c.needs_info.length ? { needs_info: c.needs_info.map(n => n.label) } : {}), health: c.summary.health, open_issues: c.summary.open_issues, overdue: c.summary.overdue_count, due_soon: c.summary.soon_count, next_due: c.summary.next_due && { item: c.summary.next_due.name, status: c.summary.next_due.label } })) };
     }
     case 'get_car': {
       const c = await resolveCar(env, a.car);
       const d = await carFull(env, c.id);
       const latestScan = d.scans[0];
       return {
-        id: c.id, nickname: c.nickname, vehicle: carLabel(c), trim: c.trim, engine: c.engine, transmission: c.transmission, vin: c.vin, notes: c.notes,
-        mileage: c.mileage, mileage_updated: c.mileage_updated_at, health: d.summary.health, fluids: d.fluids,
+        id: c.id, nickname: c.nickname, type: noun(c), vehicle: carLabel(c), trim: c.trim, engine: c.engine, transmission: c.transmission, vin: c.vin, notes: c.notes,
+        ...(() => { const { needs_info, ...dt } = d.car.attrs || {}; return Object.keys(dt).length ? { drivetrain: dt } : {}; })(), ...(d.car.needs_info.length ? { needs_info: d.car.needs_info.map(n => n.label) } : {}),
+        mileage: c.mileage, mileage_updated: c.mileage_updated_at, ...(usesHours(c) ? { hours: c.hours, hours_updated: c.hours_updated_at } : {}),
+        health: d.summary.health, fluids: d.fluids, parts_sources: d.parts_sources.stores, ...(isOffroad(c) ? { water_crossing_note: OFFROAD_NOTE } : {}),
         open_todos: d.todos.filter(t => t.status === 'open').map(t => ({ id: t.id, type: t.type || 'todo', title: t.title, priority: t.priority, notes: t.notes, reported_by: t.reporter, mileage: t.mileage, dtc_code: t.dtc_code, mechanic_first_checks: t.ai_status === 'done' ? t.ai_note : t.ai_status === 'truncated' ? `${t.ai_note}\n\n(cut off; tap "Tap to continue" on the to-do in the app)` : t.ai_status === 'pending' ? '(still being written)' : undefined, deep_research: t.research ? (t.research.status === 'done' ? t.research.report : { status: t.research.status, error: t.research.error || undefined }) : undefined })),
         overdue: d.items.filter(i => i.status === 'overdue').map(i => ({ item: i.name, status: i.label })),
         due_soon: d.items.filter(i => i.status === 'soon').map(i => ({ item: i.name, status: i.label })),
@@ -147,7 +159,7 @@ async function call(env, ctx, name, a, who) {
       const r = JSON.parse(row.data), M = c.mileage || 0;
       const out = {
         specs: r.vehicle,
-        recalls: r.recalls, recalls_note: 'Check open recalls by VIN at https://www.nhtsa.gov/recalls (recall repairs are free).',
+        recalls: r.recalls, recalls_note: isOffroad(c) ? 'Off-road recalls are with the CPSC: get_recalls looks them up (also check the maker\'s VIN lookup).' : 'Check open recalls by VIN at https://www.nhtsa.gov/recalls (recall repairs are free); get_recalls looks them up live.',
         tsbs: r.tsbs,
         known_issues: (r.known_issues || []).map(k => ({ ...k, phase: phaseOf(parseRange(k.mileage_range), M) })),
         known_issues_note: `phase is relative to the car's ${M.toLocaleString('en-US')} miles: now = in its typical window, ahead = coming up, behind = window passed, any = not mileage-based`,
@@ -160,9 +172,9 @@ async function call(env, ctx, name, a, who) {
     case 'get_fluids': case 'get_parts': case 'get_guides': {
       const c = await resolveCar(env, a.car);
       const row = await env.DB.prepare('SELECT data, fluids FROM parts_guides WHERE car_id = ?1').bind(c.id).first();
-      if (!row) return { car: c.nickname, note: 'No parts research loaded for this car.' };
+      if (name === 'get_fluids') { const fl = fluidsFor(c, row ? JSON.parse(row.fluids) : []); return fl.length ? { car: c.nickname, fluids: fl } : { car: c.nickname, fluids: [], note: 'No fluids researched for this vehicle yet.' }; }
+      if (!row) return { car: c.nickname, note: `No parts research loaded for this ${noun(c)}.`, buy_from: partsSources(c).stores };
       const d = JSON.parse(row.data);
-      if (name === 'get_fluids') return { car: c.nickname, fluids: JSON.parse(row.fluids) };
       const kw = String(a.category || a.topic || '').toLowerCase().trim();
       if (name === 'get_parts') {
         const br = await brandsForCar(env, c.id);
@@ -177,9 +189,10 @@ async function call(env, ctx, name, a, who) {
       const guides = kw ? d.guides.filter(g => `${g.title} ${g.related_issue || ''}`.toLowerCase().includes(kw)) : d.guides;
       return { car: c.nickname, guides, ...(kw ? {} : { titles_only_hint: 'Pass topic to filter; topic "tools" or "additives" for those sections.' }) };
     }
+    case 'get_recalls': return { car: (await resolveCar(env, a.car)).nickname, ...(await recallsFor(await resolveCar(env, a.car))) };
     case 'get_alternates': {
       const c = await resolveCar(env, a.car);
-      const alt = await alternatesForCar(env, c.id);
+      const alt = await alternatesForCar(env, c.id, c);
       const kw = String(a.part || '').toLowerCase().trim();
       const parts = kw ? alt.parts.filter(p => `${p.part} ${p.category || ''}`.toLowerCase().includes(kw)) : alt.parts;
       return { car: c.nickname, ...alt, parts, ...(kw && !parts.length ? { available_parts: alt.parts.map(p => p.part) } : {}) };
@@ -191,7 +204,7 @@ async function call(env, ctx, name, a, who) {
     }
     case 'get_due_list': {
       const d = await dueList(env);
-      return { today: d.today, counts: d.counts, maintenance: d.items.map(i => ({ car: i.car, item: i.name, status: i.status, detail: i.label })), todos: d.todos.map(t => ({ id: t.id, car: t.car, title: t.title, priority: t.priority, type: t.type || 'todo' })) };
+      return { today: d.today, counts: d.counts, maintenance: d.items.map(i => ({ car: i.car, item: i.name, status: i.status, detail: i.label })), readings: d.cars.map(c => ({ car: c.nickname, mileage: c.mileage, ...(c.uses_hours ? { hours: c.hours } : {}) })), todos: d.todos.map(t => ({ id: t.id, car: t.car, title: t.title, priority: t.priority, type: t.type || 'todo' })) };
     }
     case 'get_history': {
       const c = await resolveCar(env, a.car);
@@ -208,18 +221,34 @@ async function call(env, ctx, name, a, who) {
     }
     case 'update_todo': return updateTodo(env, String(a.todo_id || ''), { status: a.status, notes: a.notes, append_notes: a.append_notes, priority: a.priority }, member, createService);
     case 'complete_todo': {
-      const hist = a.log_service ? { date: a.log_service.date || todayLocal(), mileage: a.log_service.mileage, cost: a.log_service.cost, shop: a.log_service.shop, diy: !a.log_service.shop, ...(a.log_service.details ? { details: a.log_service.details } : {}) } : null;
+      const hist = a.log_service ? { date: a.log_service.date || todayLocal(), mileage: a.log_service.mileage, hours: a.log_service.hours, cost: a.log_service.cost, shop: a.log_service.shop, diy: !a.log_service.shop, ...(a.log_service.details ? { details: a.log_service.details } : {}) } : null;
       return updateTodo(env, String(a.todo_id || ''), { status: 'closed', ...(hist ? { history: hist } : {}) }, member, createService);
     }
     case 'log_service': {
       const c = await resolveCar(env, a.car);
       const items = await itemIdsByName(env, c.id, a.schedule_items);
-      const id = await createService(env, c.id, { date: a.date, mileage: a.mileage, title: a.title, details: a.details, cost: a.cost, shop: a.shop, diy: !a.shop, item_ids: items.ids }, member);
+      const id = await createService(env, c.id, { date: a.date, mileage: a.mileage, hours: a.hours, title: a.title, details: a.details, cost: a.cost, shop: a.shop, diy: !a.shop, item_ids: items.ids }, member);
       return { car: c.nickname, id, marked_done: items.ids.length, unmatched_schedule_items: items.missing, ...(items.missing.length ? { available_schedule_items: items.available } : {}) };
     }
     case 'update_mileage': {
       const c = await resolveCar(env, a.car);
-      return { car: c.nickname, mileage: await setMileage(env, c.id, a.mileage, 'mcp') };
+      if (a.mileage == null && a.hours == null) throw new HttpError(400, 'Pass mileage and/or hours.');
+      const out = { car: c.nickname };
+      if (a.mileage != null) out.mileage = await setMileage(env, c.id, a.mileage, 'mcp');
+      if (a.hours != null) out.hours = await setHours(env, c.id, a.hours, 'mcp');
+      return out;
+    }
+    case 'update_hours': {
+      const c = await resolveCar(env, a.car);
+      const add = hoursNum(a.add_hours, 'add_hours');
+      let h = hoursNum(a.hours);
+      if (h == null && add == null) throw new HttpError(400, 'Pass hours (the meter reading) or add_hours (hours used).');
+      if (h == null) {
+        if (c.hours == null) throw new HttpError(400, `The ${c.nickname} has no hour reading yet: ask for the meter reading and pass hours.`);
+        h = Math.round((Number(c.hours) + add) * 10) / 10;
+      }
+      if (c.hours != null && h < Number(c.hours) && !a.allow_lower) throw new HttpError(400, `${h} h is below the current ${c.hours} h. Pass allow_lower only if the meter was replaced or the old reading was wrong.`);
+      return { car: c.nickname, previous: c.hours, hours: await setHours(env, c.id, h, 'mcp'), ...(usesHours(c) ? {} : { note: `Hours recorded; the ${c.nickname} is a ${noun(c)}, so most of its schedule is by miles.` }) };
     }
     case 'add_receipt': {
       // a car we can't place doesn't stop the receipt: it becomes a question in the draft
@@ -233,7 +262,7 @@ async function call(env, ctx, name, a, who) {
         try { bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0)); } catch { throw new HttpError(400, 'files[].data_base64 is not valid base64'); }
         files.push({ name: f.filename || 'receipt', mime: f.mime_type, data: bin.buffer });
       }
-      const fieldKeys = ['date', 'mileage', 'shop', 'total', 'tax', 'title', 'kind', 'invoice_number', 'line_items', 'schedule_items', 'not_performed', 'notes'];
+      const fieldKeys = ['date', 'mileage', 'hours', 'shop', 'total', 'tax', 'title', 'kind', 'invoice_number', 'line_items', 'schedule_items', 'not_performed', 'notes'];
       const hasFields = fieldKeys.some(k => a[k] !== undefined && a[k] !== null && !(Array.isArray(a[k]) && !a[k].length));
       const fields = hasFields ? { ...Object.fromEntries(fieldKeys.map(k => [k, a[k]])), vehicle: { vin: a.vin } } : null;
       const res = await createReceipt(env, { source: 'mcp', files, text: String(a.transcription || '').slice(0, 20000), fields, carRef: car, member: { id: who.member_id, name: who.actor } });

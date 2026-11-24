@@ -11,7 +11,9 @@
 //   node scripts/load-research.mjs --symptom-report <todo-id> --file report.json [--local] [--dry-run]
 //
 // Files in --dir (all optional): research.json, research.md, parts-guides.json, parts-guides.md, fluids.json,
-// brands.json, brands.md, diagnosis-plans.json ({ plans: [...] }, guided diagnosis; ids must be unique across cars).
+// brands.json, brands.md, diagnosis-plans.json ({ plans: [...] }, guided diagnosis; ids must be unique across cars;
+// a plan with vehicle: {type: "utv"} and no year/model stays generic and matches every vehicle of that type).
+// research.json "schedule" rows may carry interval_hours (UTVs / ATVs): due at miles, hours or months, whichever first.
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -26,6 +28,9 @@ export const CATS = [  // (category, regex) - first match wins; used to carry la
   ['trans', /trans(mission|axle).*fluid|automatic transmission fluid|automatic transaxle|^transmission/i], ['plugs', /spark plug/i],
   ['brakefluid', /brake fluid/i], ['brakes', /brake (inspection|linings|pads)|inspect brake/i], ['belt', /belt/i], ['fuelfilter', /fuel filter/i],
   ['pcv', /pcv/i], ['battery', /battery/i], ['wipers', /wiper/i],
+  // motorcycles and off-road
+  ['valves', /valve (clearance|adjust)/i], ['carbsync', /carb(uretor)? sync/i], ['finalgear', /final (gear|drive) (oil|fluid)/i], ['chain', /\bchain\b/i],
+  ['fork', /fork oil/i], ['cvtbelt', /(cvt|drive) belt/i], ['cvtclutch', /cvt clutch/i], ['grease', /grease/i], ['cvboots', /cv boot/i], ['tireage', /tire age/i],
 ];
 export const categoryOf = name => (CATS.find(([, rx]) => rx.test(name)) || [null])[0];
 const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
@@ -42,6 +47,8 @@ export function matchPart(name, candidates) {
   return score >= 0.5 ? best : null;
 }
 
+// engine hours keep one decimal (lit() rounds numbers to integers)
+const litNum = v => v == null || v === '' || !Number.isFinite(Number(v)) ? 'NULL' : String(Math.round(Number(v) * 10) / 10);
 const readJson = (dir, f) => existsSync(join(dir, f)) ? JSON.parse(readFileSync(join(dir, f), 'utf8')) : null;
 const readText = (dir, f) => existsSync(join(dir, f)) ? readFileSync(join(dir, f), 'utf8') : null;
 
@@ -86,16 +93,16 @@ export function planLoad({ car, dir, opts, q, now = Math.floor(Date.now() / 1000
       const used = new Set();
       let order = Math.max(0, ...old.map(o => o.sort_order || 0));
       for (const s of research.schedule) {
-        if (!s.item || (!s.interval_miles && !s.interval_months)) continue;   // informational rows: Research tab only
+        if (!s.item || (!s.interval_miles && !s.interval_months && !s.interval_hours)) continue;   // informational rows: Research tab only
         const severe = s.severe === true ? 1 : 0, severeNote = typeof s.severe === 'string' ? s.severe : null;
         const src = ['manual', 'typical'].includes(s.source) ? s.source : 'typical';
         const same = researched.find(o => o.name.toLowerCase() === String(s.item).toLowerCase().slice(0, 120) && (o.severe || 0) === severe);
         if (same) {
-          const target = { interval_miles: s.interval_miles ?? null, interval_months: s.interval_months ?? null, notes: s.notes || null };
+          const target = { interval_miles: s.interval_miles ?? null, interval_months: s.interval_months ?? null, interval_hours: s.interval_hours ?? null, notes: s.notes || null };
           const diff = Object.entries(target).filter(([k, x]) => (same[k] ?? null) != x);
           if (diff.length) {
             plan.add('overwrite', 'schedule_items', same.name, diff.map(([k, x]) => `${k}: ${same[k]} -> ${x}`).join('; '));
-            sql.push(`UPDATE schedule_items SET interval_miles = ${lit(target.interval_miles)}, interval_months = ${lit(target.interval_months)}, notes = ${lit(target.notes)}, source = ${lit(src)} WHERE id = ${lit(same.id)};`);
+            sql.push(`UPDATE schedule_items SET interval_miles = ${lit(target.interval_miles)}, interval_months = ${lit(target.interval_months)}, interval_hours = ${litNum(target.interval_hours)}, notes = ${lit(target.notes)}, source = ${lit(src)} WHERE id = ${lit(same.id)};`);
           }
           continue;
         }
@@ -104,7 +111,7 @@ export function planLoad({ car, dir, opts, q, now = Math.floor(Date.now() / 1000
         if (match) used.add(match.id);
         const id = 'r-' + randomUUID().slice(0, 12);
         plan.add('new', 'schedule_items', s.item.slice(0, 60), match ? `replaces starter "${match.name}"${match.last_done_date || match.last_done_miles != null ? ' (its last-done carries over)' : ''}` : '');
-        sql.push(`INSERT INTO schedule_items (id, car_id, name, interval_miles, interval_months, last_done_date, last_done_miles, due_now, notes, sort_order, created_at, source, severe, severe_note, last_done_estimated, catchup_answer, catchup_at) VALUES (${lit(id)}, ${C}, ${lit(String(s.item).slice(0, 120))}, ${lit(s.interval_miles ?? null)}, ${lit(s.interval_months ?? null)}, ${lit(match?.last_done_date ?? null)}, ${lit(match?.last_done_miles ?? null)}, ${lit(match?.due_now ?? 0)}, ${lit(s.notes || null)}, ${++order}, ${now}, ${lit(src)}, ${severe}, ${lit(severeNote)}, ${lit(match?.last_done_estimated ?? 0)}, ${lit(match?.catchup_answer ?? null)}, ${lit(match?.catchup_at ?? null)});`);
+        sql.push(`INSERT INTO schedule_items (id, car_id, name, interval_miles, interval_months, interval_hours, last_done_date, last_done_miles, last_done_hours, due_now, notes, sort_order, created_at, source, severe, severe_note, last_done_estimated, catchup_answer, catchup_at) VALUES (${lit(id)}, ${C}, ${lit(String(s.item).slice(0, 120))}, ${lit(s.interval_miles ?? null)}, ${lit(s.interval_months ?? null)}, ${litNum(s.interval_hours ?? null)}, ${lit(match?.last_done_date ?? null)}, ${lit(match?.last_done_miles ?? null)}, ${litNum(match?.last_done_hours ?? null)}, ${lit(match?.due_now ?? 0)}, ${lit(s.notes || null)}, ${++order}, ${now}, ${lit(src)}, ${severe}, ${lit(severeNote)}, ${lit(match?.last_done_estimated ?? 0)}, ${lit(match?.catchup_answer ?? null)}, ${lit(match?.catchup_at ?? null)});`);
         if (match) for (const l of links.filter(l => l.item_id === match.id)) sql.push(`INSERT OR IGNORE INTO service_items (service_id, item_id) VALUES (${lit(l.service_id)}, ${lit(id)});`);
       }
       for (const o of generic) {
@@ -183,9 +190,11 @@ export function planLoad({ car, dir, opts, q, now = Math.floor(Date.now() / 1000
     if (bad.length) throw new Error(`diagnosis-plans.json is invalid, nothing loaded:\n  ${bad.slice(0, 30).join('\n  ')}`);
     const live = Object.fromEntries(q('SELECT id, car_id, version, source, data FROM diag_plans').map(r => [r.id, r]));
     for (const p of plans) {
-      const full = { ...p, car_id: car.id };
+      // a per-type plan (vehicle: {type: "utv"}, no year/model) stays generic: car_id NULL, it matches every vehicle of that type
+      const generic = !p.car_id && p.vehicle?.type && p.vehicle.year == null && !p.vehicle.model;
+      const full = { ...p, car_id: generic ? null : car.id };
       const r = live[p.id];
-      if (r && r.car_id && r.car_id !== car.id) { plan.add('overwrite', 'diag_plans', p.id, `belongs to another car (${r.car_id}); give the plan a unique id`); continue; }
+      if (r && r.car_id && r.car_id !== full.car_id) { plan.add('overwrite', 'diag_plans', p.id, `belongs to another car (${r.car_id}); give the plan a unique id`); continue; }
       let kind = 'new', detail = `v${p.version}, ${p.steps.length} steps`;
       if (r) {
         const lv = Number(r.version);
@@ -196,7 +205,7 @@ export function planLoad({ car, dir, opts, q, now = Math.floor(Date.now() / 1000
         else { kind = 'overwrite'; detail = `content changed but still v${lv} (bump "version" instead)`; }
       }
       plan.add(kind, 'diag_plans', p.id, detail);
-      sql.push(`INSERT INTO diag_plans (id, car_id, version, source, symptom, title, data, status, created_by, created_at, updated_at) VALUES (${lit(p.id)}, ${C}, ${p.version}, 'research', ${lit(p.symptom)}, ${lit(p.title)}, ${lit(JSON.stringify(full))}, 'active', 'load-research', ${now}, ${now}) ON CONFLICT(id) DO UPDATE SET car_id = excluded.car_id, version = excluded.version, source = 'research', symptom = excluded.symptom, title = excluded.title, data = excluded.data, status = 'active', updated_at = excluded.updated_at;`);
+      sql.push(`INSERT INTO diag_plans (id, car_id, version, source, symptom, title, data, status, created_by, created_at, updated_at) VALUES (${lit(p.id)}, ${generic ? 'NULL' : C}, ${p.version}, 'research', ${lit(p.symptom)}, ${lit(p.title)}, ${lit(JSON.stringify(full))}, 'active', 'load-research', ${now}, ${now}) ON CONFLICT(id) DO UPDATE SET car_id = excluded.car_id, version = excluded.version, source = 'research', symptom = excluded.symptom, title = excluded.title, data = excluded.data, status = 'active', updated_at = excluded.updated_at;`);
     }
   }
   return { plan, sql, tables: [...tables] };

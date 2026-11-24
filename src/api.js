@@ -1,21 +1,24 @@
 // JSON API (signed-in only; index.js enforces sign-in, Origin and Content-Type before we get here).
 import { carSummary, itemStatus, sortByUrgency } from './due.js';
-import { BODY_TYPES, COLOR_RE, HttpError, date, email, int, json, money, newId, nowSec, str, todayLocal } from './util.js';
+import { COLOR_RE, HttpError, date, email, int, json, money, newId, nowSec, str, todayLocal } from './util.js';
 import { MAX_FILE, deleteFile, getBlob, getText, putFile, safeName } from './store.js';
 import { applyScanToCar, processReport } from './email.js';
 import { chatRoutes } from './mechanic.js';
-import { aiFirstChecks, createSymptom, createTodo, expireStaleAi, setMileage, updateTodo } from './ops.js';
+import { aiFirstChecks, createSymptom, createTodo, expireStaleAi, hoursNum, setHours, setMileage, updateTodo } from './ops.js';
+import { BODY_TYPES, VEHICLE_TYPES, attrsOf, bodyFor, clearNeeds, defaultSchedule, fluidsFor, needsInfo, partsSources, typeOf, usesHours } from './vehicle.js';
+import { decodeVin, recallsFor } from './recalls.js';
 import { jobsForCar, listQueued, queueJob, recentReports } from './research-jobs.js';
 import { authMode } from './auth.js';
 import { AI_OFF_MESSAGE, aiOff } from './ai.js';
 import { integrations, notify } from './notify.js';
 import { recentNotifications, subscribe, unsubscribe } from './push.js';
 import { DISCLAIMER, ackStatus, acknowledge } from './disclaimer.js';
+export { decodeVin };
 import { addExtra, brandsForCar, removeExtra, shoppingList } from './shopping.js';
 import { finishDiagnosis, listSessions, normalizePlan, plansForCar, recordResult, sessionView, skipStep, startDiagnosis } from './diagnosis.js';
 import { catchupInfo, saveCatchup } from './catchup.js';
 import { alternatesForCar } from './alternates.js';
-import { logMileage } from './mileage.js';
+import { logHours, logMileage } from './mileage.js';
 import { confirmReceipt, createReceipt, discardReceipt, listPending, receiptView, reparseReceipt } from './receipts.js';
 import { resolveCar } from './ops.js';
 
@@ -30,6 +33,11 @@ export async function loadCar(env, id) {
 
 /** Uploaded .glb link for the 3D viewer (car3d.js loads model_url when set). */
 export const withModel = car => ({ ...car, model_url: car.model_key ? `/api/cars/${car.id}/model?v=${car.model_updated_at || 0}` : null });
+/** The car row plus the derived vehicle facts the UI and MCP use (type, hours, needs-info placeholders, model link). */
+export function withVehicle(car) {
+  const attrs = attrsOf(car);
+  return { ...withModel(car), vehicle_type: typeOf(car), attrs, uses_hours: usesHours(car), needs_info: needsInfo(car) };
+}
 
 export async function garageOverview(env, today = todayLocal()) {
   const [cars, items, todos] = await env.DB.batch([
@@ -39,7 +47,7 @@ export async function garageOverview(env, today = todayLocal()) {
   ]);
   return cars.results.map(car => {
     const s = carSummary(car, items.results.filter(i => i.car_id === car.id), todos.results.filter(t => t.car_id === car.id), today);
-    return { ...withModel(car), summary: s, todos: todos.results.filter(t => t.car_id === car.id) };
+    return { ...withVehicle(car), summary: s, todos: todos.results.filter(t => t.car_id === car.id) };
   });
 }
 
@@ -69,7 +77,8 @@ export async function carFull(env, id) {
   const itemList = sortByUrgency(summary.items.map(i => ({ ...i, history: svc.filter(s => s.item_ids.includes(i.id)).map(s => ({ id: s.id, date: s.date, mileage: s.mileage, title: s.title })) })));
   delete summary.items;
   return {
-    car: withModel(car), summary, today, photos, fluids: pg ? JSON.parse(pg.fluids) : [], diagnoses,
+    car: withVehicle(car), summary, today, photos, fluids: fluidsFor(car, pg ? JSON.parse(pg.fluids) : []), diagnoses,
+    parts_sources: partsSources(car),
     items: itemList,
     services: svc,
     todos: todos.results.map(t => ({ ...t, symptom: t.symptom ? JSON.parse(t.symptom) : null, files: files.results.filter(f => f.todo_id === t.id), research: jobs[t.id] || null })),
@@ -93,10 +102,23 @@ function carFields(b, partial) {
     if (vin && !/^[A-HJ-NPR-Z0-9]{17}$/i.test(vin)) throw new HttpError(400, 'VIN must be 17 letters/digits (no I, O or Q)');
     f.vin = vin ? vin.toUpperCase() : null;
   }
+  if (b.vehicle_type !== undefined || !partial) {
+    const vt = b.vehicle_type || typeOf({ body_type: b.body_type });
+    if (!VEHICLE_TYPES[vt]) throw new HttpError(400, `Vehicle type must be one of ${Object.keys(VEHICLE_TYPES).join(', ')}`);
+    f.vehicle_type = vt;
+  }
   if (b.body_type !== undefined || !partial) {
-    const bt = b.body_type || 'sedan';
+    const bt = b.body_type || (f.vehicle_type ? bodyFor(f.vehicle_type) : 'sedan');
     if (!BODY_TYPES.includes(bt)) throw new HttpError(400, `Body type must be one of ${BODY_TYPES.join(', ')}`);
     f.body_type = bt;
+  }
+  if (b.attrs !== undefined) {
+    if (b.attrs !== null && (typeof b.attrs !== 'object' || Array.isArray(b.attrs))) throw new HttpError(400, 'attrs must be an object');
+    const a = {}, ENUMS = { cooling: ['air', 'liquid', 'oil-air'], fuel_system: ['carbureted', 'efi'], clutch: ['wet', 'dry', 'cvt'], final_drive: ['chain', 'shaft', 'belt'] };
+    for (const [k, vals] of Object.entries(ENUMS)) if (b.attrs?.[k] != null && b.attrs[k] !== '') { if (!vals.includes(b.attrs[k])) throw new HttpError(400, `${k} must be ${vals.join(' / ')}`); a[k] = b.attrs[k]; }
+    if (b.attrs?.shared_sump != null) a.shared_sump = !!b.attrs.shared_sump;
+    if (Array.isArray(b.attrs?.needs_info)) a.needs_info = b.attrs.needs_info.filter(x => ['vin', 'mileage', 'hours', 'color', 'variant'].includes(x));
+    f.attrs = b.attrs === null ? null : JSON.stringify(a);
   }
   if (b.color !== undefined || !partial) {
     const c = b.color || '#8a8f98';
@@ -104,24 +126,21 @@ function carFields(b, partial) {
     f.color = c.toLowerCase();
   }
   set('mileage', int(b.mileage, { max: 2_000_000, name: 'Mileage' }));
+  if (b.hours !== undefined) f.hours = hoursNum(b.hours);
   set('notes', str(b.notes, 2000));
   return f;
 }
 
-const DEFAULT_SCHEDULE = [
-  ['Oil & filter change', 5000, 6], ['Tire rotation', 7500, 6], ['Engine air filter', 30000, 36], ['Cabin air filter', 15000, 12],
-  ['Coolant flush', 100000, 60], ['Transmission fluid', 60000, 60], ['Spark plugs', 100000, null], ['Brake fluid flush', null, 36],
-  ['Brake inspection', 12000, 12], ['Serpentine belt inspection', 30000, 24], ['Battery & terminals check', null, 12], ['Wiper blades', null, 12],
-];
 
 async function updateItemFromHistory(env, itemId) {
-  const latest = await env.DB.prepare(`SELECT s.date, s.mileage FROM services s JOIN service_items si ON si.service_id = s.id
+  const latest = await env.DB.prepare(`SELECT s.date, s.mileage, s.hours FROM services s JOIN service_items si ON si.service_id = s.id
     WHERE si.item_id = ?1 ORDER BY s.date DESC, s.created_at DESC LIMIT 1`).bind(itemId).first();
-  // a real logged service replaces any catch-up estimate (estimated miles are dropped if the service has none)
+  // a real logged service replaces any catch-up estimate (estimated miles/hours are dropped if the service has none)
   if (latest) await env.DB.prepare(`UPDATE schedule_items SET last_done_date = ?1,
       last_done_miles = CASE WHEN ?2 IS NOT NULL THEN ?2 WHEN last_done_estimated = 1 THEN NULL ELSE last_done_miles END,
+      last_done_hours = CASE WHEN ?4 IS NOT NULL THEN ?4 WHEN last_done_estimated = 1 THEN NULL ELSE last_done_hours END,
       last_done_estimated = 0, due_now = 0 WHERE id = ?3`)
-    .bind(latest.date, latest.mileage, itemId).run();
+    .bind(latest.date, latest.mileage, itemId, latest.hours ?? null).run();
 }
 
 async function bumpMileage(env, carId, miles) {
@@ -129,6 +148,12 @@ async function bumpMileage(env, carId, miles) {
   const r = await env.DB.prepare('UPDATE cars SET mileage = ?1, mileage_updated_at = ?2, updated_at = ?3 WHERE id = ?4 AND (mileage IS NULL OR mileage < ?1)')
     .bind(miles, todayLocal(), nowSec(), carId).run();
   if (r.meta?.changes) await logMileage(env, carId, miles, 'service');
+}
+async function bumpHours(env, carId, hours) {
+  if (hours == null) return;
+  const r = await env.DB.prepare('UPDATE cars SET hours = ?1, hours_updated_at = ?2, updated_at = ?3 WHERE id = ?4 AND (hours IS NULL OR hours < ?1)')
+    .bind(hours, todayLocal(), nowSec(), carId).run();
+  if (r.meta?.changes) await logHours(env, carId, hours, 'service');
 }
 
 async function validItemIds(env, carId, ids) {
@@ -144,17 +169,18 @@ export async function createService(env, carId, b, member) {
   const s = {
     id: newId(), date: date(b.date, { required: true }), mileage: int(b.mileage, { max: 2_000_000, name: 'Mileage' }),
     title: str(b.title, 160, { required: true, name: 'Title' }), details: str(b.details, 8000), parts: str(b.parts, 4000),
-    cost_cents: money(b.cost), diy: b.diy ? 1 : 0, shop: b.diy ? null : str(b.shop, 120),
+    cost_cents: money(b.cost), diy: b.diy ? 1 : 0, shop: b.diy ? null : str(b.shop, 120), hours: hoursNum(b.hours),
   };
   const items = await validItemIds(env, carId, b.item_ids);
-  await env.DB.prepare(`INSERT INTO services (id, car_id, date, mileage, title, details, parts, cost_cents, shop, diy, created_by, created_at)
-    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`)
-    .bind(s.id, carId, s.date, s.mileage, s.title, s.details, s.parts, s.cost_cents, s.shop, s.diy, member?.name || null, nowSec()).run();
+  await env.DB.prepare(`INSERT INTO services (id, car_id, date, mileage, title, details, parts, cost_cents, shop, diy, created_by, created_at, hours)
+    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)`)
+    .bind(s.id, carId, s.date, s.mileage, s.title, s.details, s.parts, s.cost_cents, s.shop, s.diy, member?.name || null, nowSec(), s.hours).run();
   for (const it of items) {
     await env.DB.prepare('INSERT OR IGNORE INTO service_items (service_id, item_id) VALUES (?1, ?2)').bind(s.id, it).run();
     await updateItemFromHistory(env, it);
   }
   await bumpMileage(env, carId, s.mileage);
+  await bumpHours(env, carId, s.hours);
   return s.id;
 }
 
@@ -182,22 +208,6 @@ on('POST', '/api/push/unsubscribe', async ({ env, body }) => unsubscribe(env, bo
 on('POST', '/api/push/test', async ({ env, member }) => notify(env, { kind: 'test', title: `${env.APP_NAME || 'Garage'}: test notification`, body: `Sent by ${member.name}. Notifications work.`, url: '#/settings' }));
 on('GET', '/api/notifications/recent', async ({ env }) => ({ notifications: await recentNotifications(env) }));
 on('GET', '/api/notifications', async ({ env }) => ({ notifications: (await env.DB.prepare('SELECT id, at, kind, title, body, url FROM notifications ORDER BY id DESC LIMIT 30').all()).results }));
-
-// ---------- VIN decode (NHTSA vPIC, public API) ----------
-on('GET', '/api/vin/([A-HJ-NPR-Za-hj-npr-z0-9]{17})', async ({ m }) => decodeVin(m[1]));
-export async function decodeVin(vin) {
-  const r = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${encodeURIComponent(vin.toUpperCase())}?format=json`, { headers: { Accept: 'application/json' } });
-  if (!r.ok) throw new HttpError(424, `NHTSA vPIC answered ${r.status}`);
-  const v = (await r.json()).Results?.[0] || {};
-  const n = x => (x && x !== 'Not Applicable' ? String(x).trim() : null);
-  const cls = `${v.BodyClass || ''} ${v.VehicleType || ''}`.toLowerCase();
-  const body_type = /pickup/.test(cls) ? 'pickup' : /minivan|van/.test(cls) ? 'minivan' : /sport utility|suv|crossover|multipurpose/.test(cls) ? 'suv' : /hatchback|liftback/.test(cls) ? 'hatchback' : /coupe|convertible/.test(cls) ? 'coupe' : 'sedan';
-  const engine = [n(v.DisplacementL) && `${Number(v.DisplacementL).toFixed(1)}L`, n(v.EngineConfiguration) && n(v.EngineCylinders) ? `${v.EngineConfiguration.replace(/-Shaped/i, '')}${v.EngineCylinders}` : n(v.EngineCylinders) && `${v.EngineCylinders}-cyl`, n(v.EngineModel), n(v.FuelTypePrimary) && v.FuelTypePrimary !== 'Gasoline' ? v.FuelTypePrimary : null].filter(Boolean).join(' ');
-  return { vin: vin.toUpperCase(), year: Number(v.ModelYear) || null, make: n(v.Make) && v.Make.replace(/\b\w+/g, w => w[0] + w.slice(1).toLowerCase()), model: n(v.Model), trim: n(v.Trim) || n(v.Series),
-    engine: engine || null, transmission: [n(v.TransmissionSpeeds) && `${v.TransmissionSpeeds}-speed`, n(v.TransmissionStyle)].filter(Boolean).join(' ') || null,
-    drive: n(v.DriveType), body_class: n(v.BodyClass), body_type, plant: [n(v.PlantCity), n(v.PlantCountry)].filter(Boolean).join(', ') || null,
-    error: v.ErrorCode && v.ErrorCode !== '0' ? n(v.ErrorText) : null, source: 'NHTSA vPIC' };
-}
 
 // ---------- your own 3D model per car (.glb in KV) ----------
 const glbMax = env => Math.max(1, Math.min(24, Number(env.GLB_MAX_MB) || 15)) * 1048576;
@@ -238,35 +248,50 @@ on('GET', '/api/cars', async ({ env }) => ({ cars: await garageOverview(env), to
 /** New car (web form, MCP add_car). body.default_schedule adds the generic starter schedule. */
 export async function createCar(env, body) {
   const f = carFields(body, false);
-  const id = newId(), now = nowSec();
+  return insertCar(env, f, { defaultSchedule: !!body.default_schedule, id: body.id });
+}
+/** Insert a vehicle row (+ the starter schedule for its type). Also used by tests and the fixture loader's API path. */
+export async function insertCar(env, fIn, { defaultSchedule: withSchedule = false, id = null } = {}) {
+  const f = new Proxy(fIn, { get: (o, k) => o[k] ?? null });   // D1 refuses undefined binds
+  id = id && /^[a-z0-9-]{3,60}$/.test(id) ? id : newId();
+  const now = nowSec();
   const { n } = await env.DB.prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM cars').first();
-  await env.DB.prepare(`INSERT INTO cars (id, nickname, year, make, model, trim, engine, transmission, vin, body_type, color, mileage, mileage_updated_at, notes, sort_order, created_at, updated_at)
-    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?16)`)
-    .bind(id, f.nickname, f.year, f.make, f.model, f.trim, f.engine, f.transmission, f.vin, f.body_type, f.color, f.mileage, f.mileage != null ? todayLocal() : null, f.notes, n, now).run();
+  await env.DB.prepare(`INSERT INTO cars (id, nickname, year, make, model, trim, engine, transmission, vin, body_type, color, mileage, mileage_updated_at, notes, sort_order, created_at, updated_at, vehicle_type, hours, hours_updated_at, attrs)
+    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?16, ?17, ?18, ?19, ?20)`)
+    .bind(id, f.nickname, f.year, f.make, f.model, f.trim, f.engine, f.transmission, f.vin, f.body_type || bodyFor(f.vehicle_type || 'car'), f.color || '#8a8f98', f.mileage, f.mileage != null ? todayLocal() : null, f.notes, n, now,
+      f.vehicle_type || typeOf({ body_type: f.body_type }), f.hours ?? null, f.hours != null ? todayLocal() : null, f.attrs ?? null).run();
   if (f.mileage != null) await logMileage(env, id, f.mileage, 'web');
-  if (body.default_schedule) {
-    await env.DB.batch(DEFAULT_SCHEDULE.map(([name, mi, mo], i) => env.DB.prepare(`INSERT INTO schedule_items (id, car_id, name, interval_miles, interval_months, notes, sort_order, created_at, source)
-      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'starter')`).bind(newId(), id, name, mi, mo, "Typical interval, check your owner's manual.", i + 1, now)));
+  if (f.hours != null) await logHours(env, id, f.hours, 'web');
+  if (withSchedule) {
+    const rows = defaultSchedule({ ...fIn, attrs: f.attrs });
+    await env.DB.batch(rows.map((r, i) => env.DB.prepare(`INSERT INTO schedule_items (id, car_id, name, interval_miles, interval_months, interval_hours, notes, severe_note, sort_order, created_at, source)
+      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 'starter')`).bind(newId(), id, r.name, r.interval_miles, r.interval_months, r.interval_hours, r.notes, r.severe_note, i + 1, now)));
   }
   return id;
 }
 on('POST', '/api/cars', async ({ env, body }) => ({ id: await createCar(env, body) }));
 
-/** MCP update_schedule_item: add an item, or change the one with the same name. */
+// VIN decode (NHTSA vPIC: cars, trucks, motorcycles; off-road coverage is spotty, so the form falls back to manual entry)
+on('GET', '/api/vin/([A-Za-z0-9*]{5,17})', async ({ m }) => decodeVin(m[1]));
+// open recalls: NHTSA for road vehicles, CPSC for UTVs / ATVs (with the official search links as a fallback)
+on('GET', '/api/cars/([\\w-]+)/recalls', async ({ env, m }) => recallsFor(await loadCar(env, m[1])));
+
+/** MCP update_schedule_item: add an item, or change the one with the same name. Intervals in miles, hours and/or months. */
 export async function upsertScheduleItem(env, car, a) {
   const name = str(a.name, 120, { required: true, name: 'name' });
   const mi = int(a.interval_miles, { max: 1_000_000, name: 'interval_miles' }), mo = int(a.interval_months, { max: 600, name: 'interval_months' });
+  const hr = hoursNum(a.interval_hours, 'interval_hours');
   const source = ['manual', 'typical', 'user'].includes(a.source) ? a.source : 'user';
   const existing = await env.DB.prepare('SELECT * FROM schedule_items WHERE car_id = ?1 AND lower(name) = lower(?2) AND severe = ?3').bind(car.id, name, a.severe ? 1 : 0).first();
   if (existing) {
-    await env.DB.prepare('UPDATE schedule_items SET interval_miles = COALESCE(?1, interval_miles), interval_months = COALESCE(?2, interval_months), notes = COALESCE(?3, notes), source = ?4 WHERE id = ?5')
-      .bind(mi, mo, str(a.notes, 2000), source, existing.id).run();
+    await env.DB.prepare('UPDATE schedule_items SET interval_miles = COALESCE(?1, interval_miles), interval_months = COALESCE(?2, interval_months), notes = COALESCE(?3, notes), source = ?4, interval_hours = COALESCE(?6, interval_hours) WHERE id = ?5')
+      .bind(mi, mo, str(a.notes, 2000), source, existing.id, hr).run();
     return { car: car.nickname, id: existing.id, updated: true };
   }
   const id = newId();
   const { n } = await env.DB.prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM schedule_items WHERE car_id = ?1').bind(car.id).first();
-  await env.DB.prepare('INSERT INTO schedule_items (id, car_id, name, interval_miles, interval_months, notes, sort_order, created_at, source, severe) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)')
-    .bind(id, car.id, name, mi, mo, str(a.notes, 2000), n, nowSec(), source, a.severe ? 1 : 0).run();
+  await env.DB.prepare('INSERT INTO schedule_items (id, car_id, name, interval_miles, interval_months, notes, sort_order, created_at, source, severe, interval_hours) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)')
+    .bind(id, car.id, name, mi, mo, str(a.notes, 2000), n, nowSec(), source, a.severe ? 1 : 0, hr).run();
   return { car: car.nickname, id, added: true };
 }
 
@@ -278,14 +303,26 @@ on('GET', '/api/cars/([\\w-]+)/research', async ({ env, m }) => {
 });
 
 on('PATCH', '/api/cars/([\\w-]+)', async ({ env, m, body }) => {
-  await loadCar(env, m[1]);
+  const car = await loadCar(env, m[1]);
   const f = carFields(body, true);
+  // a vehicle-type change without a body type picks a matching body (and a body change implies its type)
+  if (f.vehicle_type && !f.body_type) f.body_type = bodyFor(f.vehicle_type, car.body_type);
+  else if (f.body_type && !f.vehicle_type && typeOf({ body_type: f.body_type }) !== typeOf(car)) f.vehicle_type = typeOf({ body_type: f.body_type });
+  // filled-in placeholders stop showing as "needs info" (color counts only when it actually changes)
+  if (f.attrs !== null && (f.attrs !== undefined || car.attrs)) {
+    const base = f.attrs !== undefined ? JSON.parse(f.attrs) : attrsOf(car);
+    if (f.attrs !== undefined && !Array.isArray(base.needs_info) && Array.isArray(attrsOf(car).needs_info)) base.needs_info = attrsOf(car).needs_info;
+    const a = clearNeeds(base, { vin: f.vin, mileage: f.mileage, hours: f.hours, color: f.color && f.color !== car.color ? f.color : null, trim: f.trim && f.trim !== car.trim ? f.trim : null });
+    if (f.attrs !== undefined || JSON.stringify(a) !== JSON.stringify(attrsOf(car))) f.attrs = JSON.stringify(a);
+  }
   const keys = Object.keys(f);
   if (!keys.length) return { ok: true };
   if ('mileage' in f) { keys.push('mileage_updated_at'); f.mileage_updated_at = todayLocal(); }
+  if ('hours' in f) { keys.push('hours_updated_at'); f.hours_updated_at = todayLocal(); }
   await env.DB.prepare(`UPDATE cars SET ${keys.map((k, i) => `${k} = ?${i + 1}`).join(', ')}, updated_at = ?${keys.length + 1} WHERE id = ?${keys.length + 2}`)
     .bind(...keys.map(k => f[k]), nowSec(), m[1]).run();
   if (f.mileage != null) await logMileage(env, m[1], f.mileage, 'web');
+  if (f.hours != null) await logHours(env, m[1], f.hours, 'web');
   return { ok: true };
 });
 
@@ -303,6 +340,10 @@ on('POST', '/api/cars/([\\w-]+)/mileage', async ({ env, m, body }) => {
   await loadCar(env, m[1]);
   return { ok: true, mileage: await setMileage(env, m[1], body.mileage) };
 });
+on('POST', '/api/cars/([\\w-]+)/hours', async ({ env, m, body }) => {
+  await loadCar(env, m[1]);
+  return { ok: true, hours: await setHours(env, m[1], body.hours) };
+});
 
 // schedule items
 function itemFields(b, partial) {
@@ -313,6 +354,8 @@ function itemFields(b, partial) {
   set('interval_months', int(b.interval_months, { min: 1, max: 240, name: 'Interval months' }));
   set('last_done_date', date(b.last_done_date, { name: 'Last done date' }));
   set('last_done_miles', int(b.last_done_miles, { max: 2_000_000, name: 'Last done miles' }));
+  if (b.interval_hours !== undefined || !partial) { const h = hoursNum(b.interval_hours, 'Interval hours'); if (h != null && h < 1) throw new HttpError(400, 'Interval hours must be at least 1'); f.interval_hours = h; }
+  if (b.last_done_hours !== undefined || !partial) f.last_done_hours = hoursNum(b.last_done_hours, 'Last done hours');
   set('notes', str(b.notes, 2000));
   if (b.due_now !== undefined) f.due_now = b.due_now ? 1 : 0;
   return f;
@@ -320,19 +363,19 @@ function itemFields(b, partial) {
 on('POST', '/api/cars/([\\w-]+)/items', async ({ env, m, body }) => {
   await loadCar(env, m[1]);
   const f = itemFields(body, false);
-  if (!f.interval_miles && !f.interval_months) throw new HttpError(400, 'Give an interval in miles and/or months');
+  if (!f.interval_miles && !f.interval_months && !f.interval_hours) throw new HttpError(400, 'Give an interval in miles, hours and/or months');
   const id = newId();
   const { n } = await env.DB.prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM schedule_items WHERE car_id = ?1').bind(m[1]).first();
-  await env.DB.prepare(`INSERT INTO schedule_items (id, car_id, name, interval_miles, interval_months, last_done_date, last_done_miles, due_now, notes, sort_order, created_at)
-    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`)
-    .bind(id, m[1], f.name, f.interval_miles, f.interval_months, f.last_done_date, f.last_done_miles, f.due_now || 0, f.notes, n, nowSec()).run();
+  await env.DB.prepare(`INSERT INTO schedule_items (id, car_id, name, interval_miles, interval_months, last_done_date, last_done_miles, due_now, notes, sort_order, created_at, interval_hours, last_done_hours)
+    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)`)
+    .bind(id, m[1], f.name, f.interval_miles, f.interval_months, f.last_done_date, f.last_done_miles, f.due_now || 0, f.notes, n, nowSec(), f.interval_hours, f.last_done_hours).run();
   return { id };
 });
 on('PATCH', '/api/items/([\\w-]+)', async ({ env, m, body }) => {
   const it = await env.DB.prepare('SELECT * FROM schedule_items WHERE id = ?1').bind(m[1]).first();
   if (!it) throw new HttpError(404, 'Item not found');
   const f = itemFields(body, true);
-  if ('last_done_date' in f || 'last_done_miles' in f) {
+  if ('last_done_date' in f || 'last_done_miles' in f || 'last_done_hours' in f) {
     if (f.due_now === undefined) f.due_now = 0;
     f.last_done_estimated = 0;   // set by hand: no longer a catch-up estimate
   }
@@ -355,15 +398,15 @@ on('POST', '/api/cars/([\\w-]+)/services', async ({ env, m, body, member }) => {
 on('PATCH', '/api/services/([\\w-]+)', async ({ env, m, body }) => {
   const s = await env.DB.prepare('SELECT * FROM services WHERE id = ?1').bind(m[1]).first();
   if (!s) throw new HttpError(404, 'Service entry not found');
-  const merged = { date: s.date, mileage: s.mileage, title: s.title, details: s.details, parts: s.parts, cost: s.cost_cents != null ? s.cost_cents / 100 : null, shop: s.shop, diy: s.diy, ...body };
+  const merged = { date: s.date, mileage: s.mileage, hours: s.hours, title: s.title, details: s.details, parts: s.parts, cost: s.cost_cents != null ? s.cost_cents / 100 : null, shop: s.shop, diy: s.diy, ...body };
   const f = {
     date: date(merged.date, { required: true }), mileage: int(merged.mileage, { max: 2_000_000, name: 'Mileage' }),
     title: str(merged.title, 160, { required: true, name: 'Title' }), details: str(merged.details, 8000), parts: str(merged.parts, 4000),
-    cost_cents: money(merged.cost), diy: merged.diy ? 1 : 0,
+    cost_cents: money(merged.cost), diy: merged.diy ? 1 : 0, hours: hoursNum(merged.hours),
   };
   f.shop = f.diy ? null : str(merged.shop, 120);
-  await env.DB.prepare('UPDATE services SET date=?1, mileage=?2, title=?3, details=?4, parts=?5, cost_cents=?6, diy=?7, shop=?8 WHERE id=?9')
-    .bind(f.date, f.mileage, f.title, f.details, f.parts, f.cost_cents, f.diy, f.shop, m[1]).run();
+  await env.DB.prepare('UPDATE services SET date=?1, mileage=?2, title=?3, details=?4, parts=?5, cost_cents=?6, diy=?7, shop=?8, hours=?10 WHERE id=?9')
+    .bind(f.date, f.mileage, f.title, f.details, f.parts, f.cost_cents, f.diy, f.shop, m[1], f.hours).run();
   const before = (await env.DB.prepare('SELECT item_id FROM service_items WHERE service_id = ?1').bind(m[1]).all()).results.map(r => r.item_id);
   let after = before;
   if (body.item_ids !== undefined) {
@@ -373,6 +416,7 @@ on('PATCH', '/api/services/([\\w-]+)', async ({ env, m, body }) => {
   }
   for (const it of new Set([...before, ...after])) await updateItemFromHistory(env, it);
   await bumpMileage(env, s.car_id, f.mileage);
+  await bumpHours(env, s.car_id, f.hours);
   return { ok: true };
 });
 on('DELETE', '/api/services/([\\w-]+)', async ({ env, m }) => {
@@ -605,7 +649,7 @@ export async function dueList(env, { all = false } = {}) {
     for (const i of c.summary.items) {
       if (!all && !['overdue', 'soon'].includes(i.status)) continue;
       items.push({ key: `${c.id}:${i.id}`, car_id: c.id, car: c.nickname, car_label: label, item_id: i.id, name: i.name, status: i.status, label: i.label,
-        next_due_miles: i.next_due_miles, next_due_date: i.next_due_date, miles_left: i.miles_left, days_left: i.days_left, urgency: i.urgency });
+        next_due_miles: i.next_due_miles, next_due_date: i.next_due_date, next_due_hours: i.next_due_hours, miles_left: i.miles_left, days_left: i.days_left, hours_left: i.hours_left, urgency: i.urgency });
     }
     for (const t of c.todos) todos.push({ key: `todo:${t.id}`, car_id: c.id, car: c.nickname, id: t.id, title: t.title, priority: t.priority, dtc_code: t.dtc_code, type: t.type || null, reporter: t.reporter || null, created_at: t.created_at });
   }
@@ -616,7 +660,7 @@ export async function dueList(env, { all = false } = {}) {
     generated_at: new Date().toISOString(), today,
     counts: { overdue: items.filter(i => i.status === 'overdue').length, soon: items.filter(i => i.status === 'soon').length, open_todos: todos.length },
     items, todos,
-    cars: cars.map(c => ({ id: c.id, nickname: c.nickname, mileage: c.mileage, health: c.summary.health })),
+    cars: cars.map(c => ({ id: c.id, nickname: c.nickname, vehicle_type: c.vehicle_type, mileage: c.mileage, hours: c.hours, uses_hours: c.uses_hours, health: c.summary.health })),
   };
 }
 on('GET', '/api/due', async ({ env, url }) => dueList(env, { all: url.searchParams.get('all') === '1' }));

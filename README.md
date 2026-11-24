@@ -1,6 +1,6 @@
 # Garage
 
-A car-maintenance app for your household, styled like a video-game garage. It runs on **your own** Cloudflare
+A vehicle-maintenance app for your household (cars, trucks, motorcycles, side-by-sides and ATVs), styled like a video-game garage. It runs on **your own** Cloudflare
 account or **your own** server (Docker, Unraid), and **your own** Claude sets it up, adds your cars and researches them.
 
 <p>
@@ -12,11 +12,15 @@ account or **your own** server (Docker, Unraid), and **your own** Claude sets it
 
 *(Screenshots from the built-in demo car; all its data is made up.)*
 
-**What it does:** maintenance schedules with what's due, catch-up for unknown history, one-tap service logging,
+**What it does:** maintenance schedules with what's due (by miles, engine hours or date, whichever comes first), starter
+schedules for cars, motorcycles (chain / shaft / belt, carbs, air- or liquid-cooled), UTVs and ATVs, catch-up for unknown
+history, one-tap service logging,
 symptoms with a quick "first things to check" from an AI mechanic, guided step-by-step diagnosis, receipts read
-from a photo, parts and brand alternates with a shopping list, repair guides, researched recalls / TSBs / known issues,
-a chat with an AI mechanic that knows your car, and a 3D garage (six body styles in your paint color, or upload your
-own .glb). Claude can use all of it through the built-in MCP connector: claude.ai, the Claude phone apps, Claude
+from a photo, parts and brand alternates with a shopping list (RockAuto for cars, Partzilla / RevZilla / Rocky Mountain
+for bikes and off-road), repair guides, researched recalls / TSBs / known issues plus live NHTSA and CPSC recall lookups,
+the JASO MA/MA2 oil warning for wet-clutch bikes, a chat with an AI mechanic that knows your vehicle, and a 3D garage
+(six car body styles plus cruiser, sport, dual-sport and scooter motorcycles, a UTV and an ATV, in your paint color, or
+upload your own .glb). Claude can use all of it through the built-in MCP connector: claude.ai, the Claude phone apps, Claude
 Desktop and Claude Code. Full list: [docs/features.md](docs/features.md).
 
 ## Choose how to host
@@ -47,10 +51,11 @@ helps you set up HTTPS. Nothing goes through anyone else's account, server or Cl
 Docker without Claude Code:
 ```bash
 docker run -d --name garage-kit -p 8787:8787 -v "$PWD/garage-data:/data" \
-  -e TZ=America/Chicago -e GARAGE_PASSWORD='a-long-household-password' ghcr.io/taylorshome/garage-kit:0.1
+  -e TZ=America/Chicago -e GARAGE_PASSWORD='a-long-household-password' ghcr.io/taylorshome/garage-kit:0.2
 ```
 
-Want to look first? `npm ci && npm run demo` runs it locally with a fake demo car (see [docs/development.md](docs/development.md)).
+Want to look first? `npm ci && npm run demo` runs it locally with demo vehicles: a made-up sedan, a V Star 650
+motorcycle and a side-by-side on engine hours (see [docs/development.md](docs/development.md)).
 
 ## What it costs
 
@@ -70,7 +75,7 @@ On Docker: your own hardware, plus whatever AI provider you pick (Ollama on your
 | Piece | What you need |
 |---|---|
 | Sign-in: household password (default), Cloudflare Access, your own OIDC provider, or none (with loud warnings) | nothing extra for the password |
-| Notifications (web push): due reminders, monthly mileage check, research results | nothing; on iPhone add the app to the Home Screen |
+| Notifications (web push): due reminders, monthly mileage (or engine hours) check, research results | nothing; on iPhone add the app to the Home Screen |
 | Email-in: forward receipts and scan-tool reports | Cloudflare: your own domain + Email Routing. Docker: an IMAP mailbox |
 | Home Assistant notifications and a "due" sensor | Cloudflare: HA reachable from the internet (Nabu Casa or a Cloudflare Tunnel). Docker: HA on your LAN is fine |
 | Automatic research of every new symptom | an always-on computer (Mac, Linux box, Raspberry Pi) with Claude Code |

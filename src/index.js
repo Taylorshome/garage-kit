@@ -125,15 +125,17 @@ async function route(req, env, ctx) {
     const b = await req.json().catch(() => ({}));
     return json(await notify(env, { kind: 'health', title: String(b.title || 'Garage health').slice(0, 120), body: String(b.body || '').slice(0, 400), url: '#/settings' }));
   }
-  // Monthly mileage check reply from Home Assistant (an HA automation + rest_command; bearer HA_MILEAGE_TOKEN)
+  // Monthly mileage / engine-hours check reply from Home Assistant (an HA automation + rest_command; bearer HA_MILEAGE_TOKEN)
   if (path === '/api/ha/mileage') {
     if (!env.HA_MILEAGE_TOKEN || !safeEqual(bearer(req), env.HA_MILEAGE_TOKEN)) return json({ error: 'bad token' }, 401);
     if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== 'object') return json({ error: 'JSON body required' }, 400);
-    const carId = String(body.car_id || body.action || '').replace(/^GARAGE_MI_/, '');
-    const out = await applyMileageReply(env, { ...body, car_id: carId });
-    if (enabled(env, 'home_assistant') && !body.dry_run) await haNotify(env, { title: `${env.APP_NAME || 'Garage'}: ${out.car}`, message: out.saved ? `Saved ${out.mileage.toLocaleString('en-US')} mi.` : `Not saved: ${out.reason}. Try again or use the app.` }).catch(() => {});
+    const act = String(body.car_id || body.action || '');
+    const carId = act.replace(/^GARAGE_(MI|HR)_/, '');
+    const kind = body.kind === 'hours' || /^GARAGE_HR_/.test(act) ? 'hours' : 'mileage';   // UTVs / ATVs reply with engine hours
+    const out = await applyMileageReply(env, { ...body, car_id: carId, kind });
+    if (enabled(env, 'home_assistant') && !body.dry_run) await haNotify(env, { title: `${env.APP_NAME || 'Garage'}: ${out.car}`, message: out.saved ? (kind === 'hours' ? `Saved ${out.hours} h.` : `Saved ${out.mileage.toLocaleString('en-US')} mi.`) : `Not saved: ${out.reason}. Try again or use the app.` }).catch(() => {});
     return json(out);
   }
   // Read-only bearer endpoints for Home Assistant (REST sensor) and monitoring: HA_POLL_TOKEN

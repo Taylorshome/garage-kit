@@ -54,7 +54,7 @@ jobs:
             sleep 2
           done
           curl -fsS http://127.0.0.1:8787/healthz
-          docker exec garage node scripts/seed-demo.mjs
+          docker exec garage node scripts/seed-demo.mjs --bike --utv
           GARAGE_PASSWORD=ci-smoke-test E2E_BASE=http://127.0.0.1:8787 node scripts/e2e-local.mjs
       - name: Container log
         if: always()

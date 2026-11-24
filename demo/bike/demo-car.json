@@ -1,0 +1,39 @@
+{
+ "_about": "DEMO DATA: a 2007 Yamaha V Star 650 cruiser (variant unknown) for local testing and screenshots (scripts/seed-demo.mjs --bike). The research in research/ is real, public research for the model (owner's manual, NHTSA, owner forums, parts retailers; values marked \"verify\" were not confirmed). Not anyone's real bike: no VIN, mileage or color yet, so it shows the \"needs info\" placeholders.",
+ "car": {
+  "nickname": "V Star",
+  "year": 2007,
+  "make": "Yamaha",
+  "model": "V Star 650",
+  "trim": null,
+  "engine": "649cc air-cooled SOHC 70° V-twin, dual Mikuni BDS28 carbs",
+  "transmission": "5-speed, wet multi-plate clutch, shaft drive",
+  "mileage": null,
+  "color": "#8a8f98",
+  "vehicle_type": "motorcycle",
+  "body_type": "cruiser",
+  "attrs": {
+   "cooling": "air",
+   "fuel_system": "carbureted",
+   "clutch": "wet",
+   "final_drive": "shaft",
+   "shared_sump": true,
+   "needs_info": [
+    "vin",
+    "mileage",
+    "color",
+    "variant"
+   ]
+  },
+  "notes": "Demo bike (real public research for this model, not anyone's bike). Variant unknown: Custom (XVS650, 19 in front wheel), Classic (XVS650A, 16 in fat front + floorboards) or Silverado (XVS650AT, Classic + bags/windshield). Same engine and drivetrain. VIN, mileage and color still needed."
+ },
+ "starter_schedule": true,
+ "todos": [
+  {
+   "title": "Hard to start after sitting all winter",
+   "notes": "Cranks fine but only runs on choke, dies at idle. Sat about five months with fuel in the tank.",
+   "priority": "medium",
+   "symptom": true
+  }
+ ]
+}

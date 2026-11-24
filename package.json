@@ -1,10 +1,10 @@
 {
   "name": "garage-kit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "license": "MIT",
-  "description": "A household car-maintenance app you run yourself (your own Cloudflare account, or Docker / Unraid), set up and researched with your own Claude.",
+  "description": "A household vehicle-maintenance app (cars, motorcycles, UTVs, ATVs) you run yourself (your own Cloudflare account, or Docker / Unraid), set up and researched with your own Claude.",
   "engines": {
     "node": ">=22.5"
   },
@@ -16,7 +16,8 @@
     "db:local": "wrangler d1 migrations apply DB --local",
     "deploy": "node scripts/configure.mjs && wrangler d1 migrations apply DB --remote && wrangler deploy",
     "dev": "wrangler dev",
-    "demo": "node scripts/configure.mjs --local --mock-ai && wrangler d1 migrations apply DB --local && node scripts/secrets.mjs --local && node scripts/seed-demo.mjs && wrangler dev",
+    "demo": "node scripts/configure.mjs --local --mock-ai && wrangler d1 migrations apply DB --local && node scripts/secrets.mjs --local && node scripts/seed-demo.mjs --all && wrangler dev",
+    "seed-demo": "node scripts/seed-demo.mjs",
     "backup": "node scripts/backup.mjs",
     "test": "node --test --test-timeout=120000 test/*.test.mjs && python3 -m unittest research-worker/test_worker.py",
     "test:js": "node --test --test-timeout=120000 test/*.test.mjs",

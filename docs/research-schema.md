@@ -10,7 +10,8 @@ node scripts/load-research.mjs --car "<nickname or id>" --dir research/<car-slug
 `--schedule` applies `research.json` `schedule` (replacing the generic starter items; last-done dates carry over by
 category, items with history are never dropped). `--todos` turns `"priority": "now"` recommendations into to-dos.
 Add `--local` for a local `wrangler dev` database. From a Claude app the same data goes in with the MCP tools
-`save_research_bundle` (first load) and `save_research` (add entries). A complete fake example: `demo/research/`.
+`save_research_bundle` (first load) and `save_research` (add entries). A complete fake example: `demo/research/`;
+a real one for a motorcycle (2007 Yamaha V Star 650): `demo/bike/research/`.
 
 **Rules for every file:** every claim has a source URL (in `url`, `sources` or `source_urls`); anything not confirmed
 says so (`"verify": true`, or "unverified" / "general knowledge" in the text: the app shows these as tags); part,
@@ -28,6 +29,8 @@ TSB and recall numbers only when you actually saw them for this vehicle.
   "tsbs":    [ { "number": "...", "title": "...", "summary": "...", "url": "https://..." } ],
   "schedule": [                      // owner's-manual schedule; rows without an interval are shown on the Research tab only
     { "item": "Oil & filter change", "interval_miles": 7500, "interval_months": 12,
+      "interval_hours": 50,          // optional: engine hours (UTVs, ATVs); due at miles, hours or months, whichever comes first
+                                     // months only = a date-based item (tire age, battery, brake fluid)
       "severe": false,               // true = severe-service variant (its own row); a string = a severe-service note
       "source": "manual",            // manual (owner's manual) | typical (common practice)
       "notes": "Fluid spec, amount, page or URL" }
@@ -101,6 +104,9 @@ Order: oil, coolant, transmission, transfer case, front/rear differential, brake
 { "plans": [ {
   "id": "civic-brake-squeal",        // unique across ALL your cars: prefix it with the car
   "version": 1,                      // bump it when you change a plan (running sessions keep their copy)
+  "vehicle": { "year": 2016, "make": "Honda", "model": "Civic" },   // optional: also matches other cars of that year/make/model
+                                     // { "type": "utv" } alone (no year/make/model) = a generic plan for every vehicle of that
+                                     // type (car, truck, van, suv, motorcycle, utv, atv); the loader keeps it generic
   "symptom": "Squeal when braking", "title": "Civic: brake squeal",
   "aliases": ["brake squeal", "squeaky brakes"],    // words people use; matched fuzzily
   "todo_match": ["squeal", "brak"],                 // links the session to a matching symptom to-do
@@ -117,7 +123,8 @@ Order: oil, coolant, transmission, transfer case, front/rear differential, brake
 } ] }
 ```
 A "not sure" option is added to every step automatically. The loader validates plans with the Worker's own
-`validatePlan()` and refuses the whole file if any plan is invalid.
+`validatePlan()` and refuses the whole file if any plan is invalid. Built-in generic plans (every UTV gets the CVT
+belt slip and overheating plans) are in `src/generic-plans.js`; a plan you load with the same id replaces one.
 
 ## Symptom research reports (one to-do)
 

@@ -14,7 +14,7 @@ Everything lives in one folder mounted at `/data`:
 | `/data/secrets.json` | generated session key, VAPID (push) keys, research-worker token (mode 600) |
 | `/data/backups/` | automatic copies of `state/` taken before an upgrade migrates the database, and `garage backup` dumps |
 
-Images: `ghcr.io/taylorshome/garage-kit:<version>` (e.g. `0.1.0`), `:<major.minor>` (e.g. `0.1`) and `:latest`,
+Images: `ghcr.io/taylorshome/garage-kit:<version>` (e.g. `0.2.0`), `:<major.minor>` (e.g. `0.2`) and `:latest`,
 for linux/amd64 and linux/arm64 (Raspberry Pi 4/5 with a 64-bit OS works).
 
 > **Not professional advice.** This information comes from AI and online research, not a certified mechanic. Verify
@@ -28,10 +28,10 @@ mkdir -p garage-data
 docker run -d --name garage-kit --restart unless-stopped \
   -p 8787:8787 -v "$PWD/garage-data:/data" \
   -e TZ=America/Chicago -e GARAGE_PASSWORD='choose-a-long-household-password' \
-  ghcr.io/taylorshome/garage-kit:0.1
+  ghcr.io/taylorshome/garage-kit:0.2
 ```
 Open `http://<this machine>:8787`, sign in with the password, add a car. Want to look around first?
-`docker exec garage-kit node scripts/seed-demo.mjs` adds a made-up demo car (delete it in the app afterwards).
+`docker exec garage-kit node scripts/seed-demo.mjs` adds a made-up demo car (`--bike --utv` also a demo motorcycle and side-by-side; delete them in the app afterwards).
 
 The container runs as uid 1000 by default. If the data folder belongs to someone else, it stops with a message
 saying how to fix it: `sudo chown -R 1000:1000 garage-data`, or run it as the folder's owner with `--user`.
@@ -211,11 +211,11 @@ kit doesn't do that.
 ## Upgrade
 
 ```bash
-docker compose pull && docker compose up -d         # or: docker pull ghcr.io/taylorshome/garage-kit:0.1, re-create
+docker compose pull && docker compose up -d         # or: docker pull ghcr.io/taylorshome/garage-kit:0.2, re-create
 ```
 Unraid: Docker tab → **Check for Updates** → apply. On start the container compares the database with the image's
 migrations; when there are new ones it copies `/data/state` to `/data/backups/<time>-before-<migration>/` first,
-then applies them (each in one transaction). Migrations only add tables and columns. Pin `:0.1` (bug fixes) or an
+then applies them (each in one transaction). Migrations only add tables and columns. Pin `:0.2` (bug fixes) or an
 exact version to upgrade on your own schedule; read [CHANGELOG.md](../CHANGELOG.md) before jumping a minor version.
 
 **Roll back**: stop the container, move `/data/state` aside, copy the matching `/data/backups/...-before-.../` back

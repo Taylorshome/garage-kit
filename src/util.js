@@ -69,7 +69,7 @@ export function email(v, { name = 'email' } = {}) {
   return s.toLowerCase();
 }
 export const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
-export const BODY_TYPES = ['sedan', 'coupe', 'hatchback', 'minivan', 'suv', 'pickup'];
+export { BODY_TYPES } from './vehicle.js';   // body styles for the 3D model (cars, bikes, UTV, ATV)
 
 /** The garage's time zone (garage.config.json "timezone" -> var TIMEZONE); set once per request by index.js. */
 export let TZ = 'UTC';

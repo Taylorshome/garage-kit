@@ -5,6 +5,7 @@ import { carSummary, sortByUrgency } from './due.js';
 import { HttpError, newId, nowSec, str, todayLocal } from './util.js';
 import { reportBrief } from './research-jobs.js';
 import { RESEARCH_BUDGET, selectResearch } from './research-context.js';
+import { attrsOf, fluidsFor, noun, typeOf, usesHours, wetClutch } from './vehicle.js';
 
 const HISTORY_TURNS = 20;
 const HISTORY_CHARS = 40000;   // newest turns first; keeps the prompt well inside gpt-oss-120b's 128k-token window (glm-5.3: 1M)
@@ -27,11 +28,16 @@ export async function carContext(env, carId, { query = [], budget = RESEARCH_BUD
   const sum = carSummary(car, items.results, todos.results, today);
   const due = sortByUrgency(sum.items).filter(i => i.status === 'overdue' || i.status === 'soon');
   const lines = [];
-  lines.push(`Vehicle: ${car.year ?? '?'} ${car.make ?? ''} ${car.model ?? ''}${car.trim ? ` (${car.trim})` : ''}, nickname "${car.nickname}".`);
+  lines.push(`Vehicle: ${car.year ?? '?'} ${car.make ?? ''} ${car.model ?? ''}${car.trim ? ` (${car.trim})` : ''}, nickname "${car.nickname}". Type: ${noun(car)}${car.body_type && typeOf(car) === 'motorcycle' ? ` (${car.body_type})` : ''}.`);
+  const a = attrsOf(car);
+  const facts = [a.cooling && `${a.cooling}-cooled`, a.fuel_system, a.clutch ? `${a.clutch} clutch` : wetClutch(car) ? 'wet clutch' : null, a.final_drive && `${a.final_drive} final drive`,
+    a.shared_sump === true ? 'engine/gearbox share one oil sump' : a.shared_sump === false ? 'separate gearbox oil' : null].filter(Boolean);
+  if (facts.length) lines.push(`Drivetrain facts: ${facts.join(', ')}.`);
   if (car.engine) lines.push(`Engine: ${car.engine}.`);
   if (car.transmission) lines.push(`Transmission: ${car.transmission}.`);
   if (car.vin) lines.push(`VIN: ${car.vin}.`);
   lines.push(`Mileage: ${car.mileage != null ? car.mileage.toLocaleString('en-US') + ' miles' : 'unknown'} (as of ${car.mileage_updated_at || 'unknown'}). Today is ${today}.`);
+  if (usesHours(car)) lines.push(`Engine hours: ${car.hours != null ? `${car.hours} h` : 'unknown'} (as of ${car.hours_updated_at || 'unknown'}). Off-road maintenance is mostly by hours.`);
   if (car.notes) lines.push(`Owner notes: ${car.notes}`);
   lines.push('', 'Open issues / to-dos:');
   lines.push(...(todos.results.length ? todos.results.map(t => `- [${t.priority}] ${t.title}${t.dtc_code ? ` (code ${t.dtc_code})` : ''}${t.notes ? `\n  notes: ${t.notes.replace(/\s+/g, ' ').slice(0, 500)}` : ''}`) : ['- none']));
@@ -47,7 +53,8 @@ export async function carContext(env, carId, { query = [], budget = RESEARCH_BUD
     return `- ${s.scan_date || new Date(s.received_at * 1000).toISOString().slice(0, 10)}${s.mileage ? ` @ ${s.mileage} mi` : ''}: ${cs.length ? cs.map(c => `${c.code}${c.description ? ` ${c.description}` : ''}${c.module ? ` [${c.module}]` : ''}`).join('; ') : 'no codes'}`;
   }) : ['- none']));
   const pg = await env.DB.prepare('SELECT fluids FROM parts_guides WHERE car_id = ?1').bind(carId).first();
-  if (pg) lines.push('', fluidsBrief(JSON.parse(pg.fluids)));
+  const fl = fluidsFor(car, pg ? JSON.parse(pg.fluids) : []);
+  if (fl.length) lines.push('', fluidsBrief(fl));
   const { results: reports } = await env.DB.prepare(`SELECT j.result, t.title FROM research_jobs j JOIN todos t ON t.id = j.todo_id
     WHERE j.car_id = ?1 AND j.status = 'done' AND t.status = 'open' ORDER BY j.finished_at DESC LIMIT 4`).bind(carId).all();
   for (const r of reports) lines.push('', reportBrief(r.title, JSON.parse(r.result)));
@@ -64,13 +71,13 @@ export async function carContext(env, carId, { query = [], budget = RESEARCH_BUD
 
 /** Fluids table for the prompt (from the parts research; newer than the general research). */
 export function fluidsBrief(rows) {
-  return 'FLUIDS (from the parts research; these supersede older figures):\n' + rows.map(f => `- ${f.fluid}: ${f.buy}; ${f.amount}${f.amount_label ? ` ${f.amount_label}` : ''}${f.total ? `, ${f.total} ${f.total_label}` : ''}${f.liters ? ` (${f.liters})` : ''}${f.notes ? `. ${f.notes}` : ''}${f.verify ? ' [verify]' : ''}`).join('\n');
+  return 'FLUIDS (from the parts research; these supersede older figures):\n' + rows.map(f => `- ${f.fluid}: ${f.buy}; ${f.amount}${f.amount_label ? ` ${f.amount_label}` : ''}${f.total ? `, ${f.total} ${f.total_label}` : ''}${f.liters ? ` (${f.liters})` : ''}${f.notes ? `. ${f.notes}` : ''}${f.warning ? ` WARNING: ${f.warning}` : ''}${f.sump ? ` ${f.sump}` : ''}${f.verify ? ' [verify]' : ''}`).join('\n');
 }
 
 export function systemPrompt(ctxText) {
-  return `You are "the mechanic", a friendly, experienced automotive technician helping a family keep their own cars running. You are talking to the owners, who may do some of their own work.
+  return `You are "the mechanic", a friendly, experienced technician (cars, trucks, motorcycles, side-by-sides and ATVs) helping a family keep their own vehicles running. You are talking to the owners, who may do some of their own work.
 
-Here is what the garage app knows about THIS car (trust it, refer to it):
+Here is what the garage app knows about THIS vehicle (trust it, refer to it; it may be a motorcycle, UTV or ATV, not a car):
 ${ctxText}
 
 How to help:
@@ -80,7 +87,8 @@ How to help:
 - If there is a DEEP RESEARCH REPORT for the issue being discussed, use it first and mention it ("the research report for this symptom says…").
 - Prefer the RESEARCH FINDINGS above and cite them briefly when you use them (e.g. "TSB 09-002-14", "known issue: rocker arm failure", "recall 14V-224", "manual: 5W-30, 6.0 qt"). When a finding lists a source link, include that link (markdown) in your citation. The findings are the parts of the research most relevant to this conversation; "Other research on file" lists titles that were left out. When something comes from your general knowledge rather than those findings, say so ("general knowledge, not in your research").
 - Specs from the research (oil type/capacity, fluids, part numbers) are fine to quote as "per the research"; still remind them to verify part fitment by VIN.
-- Safety first, whenever relevant: hot cooling systems (never open when hot), jack stands (never work under a car on a jack alone), fuel and battery hazards, brakes/steering being safety-critical, and when to stop driving the car.
+- Safety first, whenever relevant: hot cooling systems (never open when hot), jack stands (never work under a car on a jack alone), fuel and battery hazards, brakes/steering being safety-critical, and when to stop driving the car. Motorcycles: secure the bike on a center/rear stand, hot pipes, tires and brakes are life-critical, don't ride it if brakes, tires or steering are in doubt. UTVs/ATVs: park + chock, never run with the CVT cover off, check for water after crossings.
+- Motorcycles with a wet clutch need JASO MA/MA2 oil (never energy-conserving car oil: the clutch can slip). UTV/ATV service is by engine hours as much as miles.
 - Be honest about uncertainty. Say "I'm not sure" or "this could be several things" when that's the truth.
 - Do NOT state torque specs, fluid capacities, part numbers or wiring pin-outs as facts. If they matter, give a typical ballpark clearly labelled as approximate and tell them to verify it in the service manual, on the part's packaging, or with a parts counter for their VIN.
 - If a symptom suggests something dangerous (brake failure, fuel smell, overheating badly, smoke, steering issues), say clearly not to drive it until checked.

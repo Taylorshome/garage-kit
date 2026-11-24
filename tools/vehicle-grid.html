@@ -1,0 +1,61 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Vehicle grid</title><style>html,body{margin:0;background:#000;color:#fff;font:12px sans-serif}
+#g{display:grid;grid-template-columns:repeat(var(--cols,3),var(--w,480px));gap:4px}#v{position:absolute;left:-4000px}img{width:var(--w,480px);display:block}</style></head>
+<body><div id="g"></div><div id="v"></div><script type="module">
+// Dev preview of the procedural motorcycles / UTV / ATV (public/vehicles3d.js) and the car body styles, rendered
+// through the real CarViewer. Not served by the Worker. From the kit root: python3 -m http.server 8765, then
+//   http://localhost:8765/tools/vehicle-grid.html?ids=cruiser,sport,dualsport,scooter,utv,atv&views=0:0.06,0.75:0.2,2.4:0.2&color=%23a01818&w=480&h=270
+//   ?lineup=pickup,cruiser,atv,utv  -> one scene with the vehicles side by side (scale check)
+// window.ready becomes true once everything has rendered (for headless screenshots).
+window.GARAGE_ASSET_BASE = '/public';
+const { CarViewer, createCar, specFor } = await import('/public/car3d.js');
+const q = new URLSearchParams(location.search);
+const W = Number(q.get('w') || 480), H = Number(q.get('h') || 270);
+document.documentElement.style.setProperty('--w', W + 'px');
+document.documentElement.style.setProperty('--cols', q.get('cols') || 3);
+const el = document.getElementById('v'); el.style.width = W + 'px'; el.style.height = H + 'px';
+const rows = {
+  cruiser: { body_type: 'cruiser', vehicle_type: 'motorcycle', make: 'Yamaha', model: 'V Star 650 Classic' },
+  sport: { body_type: 'sport', vehicle_type: 'motorcycle', make: 'Kawasaki', model: 'Ninja 650' },
+  dualsport: { body_type: 'dualsport', vehicle_type: 'motorcycle', make: 'Kawasaki', model: 'KLR650' },
+  scooter: { body_type: 'scooter', vehicle_type: 'motorcycle', make: 'Honda', model: 'PCX' },
+  utv: { body_type: 'utv', vehicle_type: 'utv', make: 'Polaris', model: 'RZR XP 1000' },
+  atv: { body_type: 'atv', vehicle_type: 'atv', make: 'Yamaha', model: 'Grizzly 700' },
+  sedan: { body_type: 'sedan', vehicle_type: 'car' },
+  minivan: { body_type: 'minivan', vehicle_type: 'van' },
+  pickup: { body_type: 'pickup', vehicle_type: 'truck' },
+};
+const color = q.get('color') || undefined;
+const v = new CarViewer(el, { garage: q.get('garage') !== '0', capture: true });
+await v.init();
+const snap = () => { v.renderOnce(); const img = new Image(); img.src = v.renderer.domElement.toDataURL('image/png'); document.getElementById('g').appendChild(img); };
+const views = (q.get('views') || '0:0.06,0.75:0.2,2.4:0.2').split(',').map(s => s.split(':').map(Number));
+const dist = q.get('dist');
+const info = [];
+if (q.get('lineup')) {
+  const ids = q.get('lineup').split(',');
+  v.show({ id: ids[0], ...rows[ids[0]], color }); await v.ready;
+  const gap = Number(q.get('gap') || 0.5); let x = v.spec.L / 2, total = v.spec.L;
+  for (const id of ids.slice(1)) {
+    const S = specFor(rows[id]); x += gap + S.L / 2;
+    const o = createCar(S, color || S.defaultColor); await o.userData.ready; o.position.x = -x; v.current.add(o);
+    x += S.L / 2; total += gap + S.L;
+  }
+  v.current.position.x = total / 2 - v.spec.L / 2; v.spec = { L: total, lookY: 0.9 };
+  for (const [az, el2] of views) { v.setView(az, el2); v.targetDist = v.dist = Number(dist || 11); snap(); }
+} else {
+  for (const id of (q.get('ids') || 'cruiser,utv,atv').split(',')) {
+    const row = { id, ...rows[id], color };
+    v.show(row); await v.ready;
+    let tris = 0; v.current.traverse(o => { if (o.isMesh) tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; });
+    const b = new (await import('https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js')).Box3().setFromObject(v.current);
+    const low = {}; v.current.updateMatrixWorld(true);
+    v.current.traverse(o => { if (!o.isMesh) return; const a = o.geometry.attributes.position, p = new b.min.constructor(); let m = 9, at = null;
+      for (let i = 0; i < a.count; i++) { p.fromBufferAttribute(a, i).applyMatrix4(o.matrixWorld); if (p.y < m) { m = p.y; at = p.toArray().map(n => +n.toFixed(3)); } }
+      const role = Object.entries(v.current.userData.mats).find(([, mm]) => mm === o.material)?.[0]; if (m < 0.002) low[role] = at; });
+    info.push({ id, spec: v.spec.id, tris, low, size: [b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z].map(n => +n.toFixed(3)), minY: +b.min.y.toFixed(4) });
+    for (const [az, el2] of views) { v.setView(az, el2); if (dist) v.targetDist = v.dist = Number(dist); else v.dist = v.targetDist; snap(); }
+  }
+}
+window.info = info;
+window.ready = true;
+</script></body></html>

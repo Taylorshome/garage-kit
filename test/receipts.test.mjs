@@ -62,7 +62,7 @@ test('validation: car from VIN or year/make/model, unknown car asks, wrong VIN w
   v = validateDraft(normalizeDraft({ vehicle: { year: 2009, make: 'TOYOTA', model: 'Camry LE 2.4L' } }), { cars });
   assert.equal(v.car.id, 'car-sedan');
   v = validateDraft(normalizeDraft({ date: '2026-11-12' }), { cars });
-  assert.equal(v.car, null); assert.ok(v.questions.includes('Which car is this for?'));
+  assert.equal(v.car, null); assert.ok(v.questions.includes('Which vehicle is this for?'));
   v = validateDraft(normalizeDraft({ car_id: 'car-minivan', vehicle: { vin: '4T1BE46K39U000456' } }), { cars });
   assert.ok(v.flags.some(f => f.field === 'car' && /isn't/.test(f.msg)));
   v = validateDraft(normalizeDraft({ car_id: 'car-minivan', date: '2026-11-18', total: 148.32 }), { cars, services: [{ car_id: 'car-minivan', date: '2026-11-18', cost_cents: 14832, title: 'Oil change' }] });

@@ -1,0 +1,489 @@
+{
+ "vehicle": "2007 Yamaha V Star 650 (XVS650 Custom / XVS650A Classic / XVS650AT Silverado; variant unconfirmed), 649cc air-cooled V-twin, dual Mikuni carbs, wet clutch, shaft drive",
+ "research_date": "2026-11-24",
+ "scope_note": "Reduced scope (demo/test vehicle): 8 parts, 3 guides, 3 tools. Many prices not checked; RevZilla, manualowl, AMSOIL and Yamaha EU manual PDFs returned 403 to automated fetch and were skipped.",
+ "parts": [
+  {
+   "category": "engine",
+   "name": "Engine oil",
+   "spec": "4-stroke motorcycle oil, JASO MA/MA2 (wet clutch), API SG or higher; Yamalube 10W-40 / 20W-40 typical (Yamaha chart: 20W-40 above ~32F, 10W-30 below; verify chart in your manual). 2.80 L (2.96 US qt) with filter; 2.60 L (2.75 US qt) oil only",
+   "part_numbers": [
+    {
+     "brand": "Yamalube",
+     "number": "10W-40 or 20W-40 4-stroke (verify)"
+    }
+   ],
+   "price_usd": "verify",
+   "price_as_of": "2026-11-24",
+   "links": [
+    {
+     "label": "Motul oil change kit XVS650 (RevZilla)",
+     "url": "https://www.revzilla.com/motorcycle/motul-oil-change-kit-yamaha-xvs650-v-star-1998-2010"
+    }
+   ],
+   "notes": "Engine, gearbox and wet clutch share the oil. Do NOT use 'Energy Conserving'/'Resource Conserving' car oil: friction modifiers can make the clutch slip. Capacities are from the 2011 V Star 650 Custom owner's manual (search snippet); same engine as 2007 but confirm in your manual.",
+   "source_urls": [
+    "https://www.manualowl.com/am/Yamaha%20Motorsports/2011-V%20Star%20650%20Custom/Manual/11600?page=51",
+    "https://manualshive.com/en/manual/yamaha/v-star-650/946866?page=8",
+    "https://technocoma.blogspot.com/p/star-vstar-dragstar-650-maintenance-and.html"
+   ]
+  },
+  {
+   "category": "engine",
+   "name": "Oil filter (cartridge element)",
+   "spec": "Paper cartridge element under a cover on the engine (not spin-on)",
+   "part_numbers": [
+    {
+     "brand": "HiFlo",
+     "number": "HF145"
+    },
+    {
+     "brand": "K&N",
+     "number": "KN-145"
+    },
+    {
+     "brand": "Yamaha OEM",
+     "number": "verify: 4X7-13440-xx family per HF145 cross-refs; RevZilla lists 5GH-13440-71-00 (supersedes 5GH-13440-00-00) but fitment to XVS650 not confirmed"
+    }
+   ],
+   "price_usd": "verify",
+   "price_as_of": "2026-11-24",
+   "links": [
+    {
+     "label": "K&N 2007 XVS650 lookup",
+     "url": "https://www.knfilters.com/yamaha/xvs650-v-star-custom/650/2007"
+    },
+    {
+     "label": "HF145 XVS650 listing",
+     "url": "https://www.mpartz.com/oilfilter-yamaha-xvs650-1997-2007-hiflo-hf145-p-35908m309y"
+    }
+   ],
+   "notes": "HF145/KN-145 is the consistent aftermarket fit for 1998-2016 XVS650. Look up the OEM number on a Partzilla/Yamaha fiche with your VIN before ordering OEM. Replace the cover O-rings if supplied/hardened.",
+   "source_urls": [
+    "https://www.knfilters.com/yamaha/xvs650-v-star-custom/650/2007",
+    "https://www.mpartz.com/oilfilter-yamaha-xvs650-1997-2007-hiflo-hf145-p-35908m309y",
+    "https://ebay.com/itm/273490590906",
+    "https://www.revzilla.com/oem/yamaha/yamaha-5gh-13440-71-00-element-assy-oil-cl"
+   ]
+  },
+  {
+   "category": "ignition",
+   "name": "Spark plugs (2)",
+   "spec": "NGK DPR7EA-9, gap ~0.8-0.9 mm (0.031-0.035 in; listing value 0.035 in, verify against manual)",
+   "part_numbers": [
+    {
+     "brand": "NGK",
+     "number": "DPR7EA-9"
+    },
+    {
+     "brand": "NGK Iridium IX",
+     "number": "DPR7EIX-9"
+    },
+    {
+     "brand": "Denso",
+     "number": "verify (X22EPR-U9 is the usual cross; not confirmed for this bike)"
+    }
+   ],
+   "price_usd": "verify",
+   "price_as_of": "2026-11-24",
+   "links": [
+    {
+     "label": "NGK DPR7EA9 XVS650",
+     "url": "https://www.mpartz.com/spark-plug-yamaha-xvs650-1997-2007-ngk-dpr7ea9-p-203m309y"
+    }
+   ],
+   "notes": "Two plugs (one per cylinder). Some retailer pages list wrong plugs (BR10EG, RA8HC) for this bike; ignore those.",
+   "source_urls": [
+    "https://www.mpartz.com/spark-plug-yamaha-xvs650-1997-2007-ngk-dpr7ea9-p-203m309y",
+    "https://www.sportbiketrackgear.com/ngk-iridium-ix-spark-plug-dpr7eix-9-1998-2010-yamaha-xvs650a-v-star-classic",
+    "https://www.sportbiketrackgear.com/ngk-iridium-ix-spark-plug-dpr7eix-9-2002-2010-yamaha-xvs650at-v-star-silverado/",
+    "https://technocoma.blogspot.com/p/star-vstar-dragstar-650-maintenance-and.html"
+   ]
+  },
+  {
+   "category": "electrical",
+   "name": "Battery",
+   "spec": "YT12B-BS size (12 V, sealed AGM) per Yuasa/retailer fitment; NOT YTX14-BS (no source ties YTX14 to the XVS650). Verify against the battery in the bike.",
+   "part_numbers": [
+    {
+     "brand": "Yuasa",
+     "number": "YT12B-BS"
+    },
+    {
+     "brand": "PowerStar",
+     "number": "PM12B-BS"
+    }
+   ],
+   "price_usd": "verify",
+   "price_as_of": "2026-11-24",
+   "links": [
+    {
+     "label": "Yuasa YT12B-BS fitment (PartsGiant)",
+     "url": "https://www.partsgiant.com/p342186-yuasa-maintenance-free-battery?f=116709"
+    }
+   ],
+   "notes": "Read the label on the installed battery before buying. Lithium (Shorai/Antigravity) options exist in this size but not researched (scope cut).",
+   "source_urls": [
+    "https://www.partsgiant.com/p342186-yuasa-maintenance-free-battery?f=116709",
+    "https://www.walmart.com/ip/394053495"
+   ]
+  },
+  {
+   "category": "intake",
+   "name": "Air filter",
+   "spec": "Panel element in the right-side air box",
+   "part_numbers": [
+    {
+     "brand": "Yamaha OEM",
+     "number": "4TR-14451-00-00 (per K&N cross-reference)"
+    },
+    {
+     "brand": "K&N",
+     "number": "YA-6598"
+    }
+   ],
+   "price_usd": "K&N YA-6598 roughly 67-84 (retailer range seen in search; verify)",
+   "price_as_of": "2026-11-24",
+   "links": [
+    {
+     "label": "K&N YA-6598",
+     "url": "https://www.knfilters.com/ya-6598-replacement-air-filter"
+    }
+   ],
+   "notes": "K&N fitment years vary by seller (Happy-Trail: Custom/Classic 1998-2016, Silverado 2002-2011). A K&N alone shouldn't need rejetting, but a pod filter/open exhaust will.",
+   "source_urls": [
+    "https://www.knfilters.com/ya-6598-replacement-air-filter",
+    "https://www.knfilters.co.uk/cross-reference/yamaha/4tr144510000-air-filter",
+    "https://www.happy-trail.com/oe-replacement-high-flow-air-filtertm-air-filter-yamaha-xvs650.html"
+   ]
+  },
+  {
+   "category": "electrical",
+   "name": "Regulator/rectifier",
+   "spec": "Yamaha OEM 5KP-81960-00-00 (RevZilla OEM lists for XVS650 Custom 2001-2016, Classic, Silverado); 5FL-81960-00-00 also appears in cross-refs",
+   "part_numbers": [
+    {
+     "brand": "Yamaha OEM",
+     "number": "5KP-81960-00-00"
+    },
+    {
+     "brand": "RMStator",
+     "number": "RMS020-103273"
+    },
+    {
+     "brand": "Shindengen MOSFET",
+     "number": "FH020AA kit (universal; needs connector adaptation; V Star fitment not sourced)"
+    },
+    {
+     "brand": "Rick's",
+     "number": "verify (Walmart page lists 27-10421 under XVS650 specs; not confirmed)"
+    }
+   ],
+   "price_usd": "FH020AA kit ~149.99 (one eBay listing); others verify",
+   "price_as_of": "2026-11-24",
+   "links": [
+    {
+     "label": "RevZilla OEM 5KP-81960",
+     "url": "https://www.revzilla.com/oem/yamaha/yamaha-5kp-81960-00-00-rectifier-regulator-assy"
+    },
+    {
+     "label": "RMStator RMS020-103273",
+     "url": "https://rmstator.com/en_ca/rms020-103273"
+    }
+   ],
+   "notes": "Test charging (13.5-14.5 V at ~3-5k rpm) before buying. Partzilla/RevZilla fiche: Electrical 1 diagram.",
+   "source_urls": [
+    "https://www.revzilla.com/oem/yamaha/yamaha-5kp-81960-00-00-rectifier-regulator-assy",
+    "https://rmstator.com/en_ca/rms020-103273",
+    "https://leadersrpmshop.com/rmstator-new-aftermarket-yamaha-regulator-rectifier-rms020-103273",
+    "https://www.revzilla.com/oem/yamaha/1999-yamaha-xvs650-v-star-custom/electrical-1",
+    "https://www.ebay.com/itm/SHINDENGEN-MOSFET-FH020AA-REGULATOR-RECTIFIER-KIT-NEW-GENUINE-SHINDENGEN-/380704480069"
+   ]
+  },
+  {
+   "category": "drivetrain",
+   "name": "Final gear oil (shaft drive)",
+   "spec": "Hypoid gear oil SAE 80 API GL-4 (or SAE 80W-90 GL-4 per manual snippet); about 0.19 L (0.20 US qt)",
+   "part_numbers": [
+    {
+     "brand": "Yamalube",
+     "number": "Shaft Drive Oil / Hypoid gear 80W-90 (verify product)"
+    }
+   ],
+   "price_usd": "verify",
+   "price_as_of": "2026-11-24",
+   "links": [],
+   "notes": "Capacity from a jumbled 2002/2003 V Star Custom manual snippet; verify. Use new drain/filler gaskets.",
+   "source_urls": [
+    "https://manualowl.com/am/Yamaha%20Motorsports/2003-V%20Star%20Custom/Manual/11136?page=102",
+    "https://maintenanceschedule.com/?p=1749"
+   ]
+  },
+  {
+   "category": "brakes",
+   "name": "Front brake pads",
+   "spec": "Single front disc",
+   "part_numbers": [
+    {
+     "brand": "EBC",
+     "number": "FA179 (organic) / FA179V (semi-sintered)"
+    }
+   ],
+   "price_usd": "verify",
+   "price_as_of": "2026-11-24",
+   "links": [
+    {
+     "label": "EBC FA179V (J&P)",
+     "url": "https://www.jpcycles.com/product/ebc-fa179v-semi-sintered-front-brake-pads"
+    }
+   ],
+   "notes": "Included because it was found; rear (drum vs disc by variant) not researched after scope cut.",
+   "source_urls": [
+    "https://www.jpcycles.com/product/ebc-fa179v-semi-sintered-front-brake-pads",
+    "https://www.cyclegear.com/parts/ebc-fa179v-semi-sintered-front-brake-pads"
+   ]
+  }
+ ],
+ "guides": [
+  {
+   "title": "Engine oil and filter change",
+   "related_issue": "routine maintenance",
+   "difficulty": 2,
+   "time": "45-60 min",
+   "tools": [
+    "17 mm socket (drain bolt; per video)",
+    "5 mm and 4 mm Allen (filter cover; per video)",
+    "drain pan",
+    "funnel",
+    "torque wrench",
+    "new drain-bolt crush washer"
+   ],
+   "steps": [
+    "Warm engine a few minutes, then shut off; bike upright on level ground (Yamaha checks level upright, not on sidestand)",
+    "Remove drain bolt, drain fully",
+    "Remove oil filter cover, replace cartridge (HF145/KN-145), check cover O-ring(s)",
+    "Reinstall drain bolt with new crush washer; torque to manual spec (verify)",
+    "Fill ~2.8 L (2.96 US qt) JASO MA oil, start, idle briefly, check for leaks",
+    "Shut off, wait a few minutes, check sight glass/level upright; top up between marks"
+   ],
+   "safety": [
+    "Hot oil burns",
+    "Don't overtighten drain bolt into aluminum case",
+    "Never use energy-conserving car oil (clutch slip)"
+   ],
+   "videos": [
+    {
+     "title": "Yamaha V Star 650 Oil and Filter Change",
+     "channel": "unverified",
+     "url": "https://www.youtube.com/watch?v=Nb7Gfw38nkU"
+    },
+    {
+     "title": "How to Change Yamaha V-Star 650 Oil + Filter",
+     "channel": "unverified",
+     "url": "https://www.youtube.com/watch?v=PODXskCMQfA"
+    },
+    {
+     "title": "Yamaha Star 650 Maintenance - Oil Change With Filter",
+     "channel": "technocoma (unverified)",
+     "url": "https://www.youtube.com/watch?v=kqVxi-tG5Xs"
+    },
+    {
+     "title": "V-Star 650 Oil and Air Filter Change",
+     "channel": "unverified",
+     "url": "https://www.youtube.com/watch?v=YTV-c8FLsgI"
+    }
+   ],
+   "articles": [
+    {
+     "title": "Technocoma: Star 650 maintenance series",
+     "url": "https://technocoma.blogspot.com/p/star-vstar-dragstar-650-maintenance-and.html"
+    }
+   ]
+  },
+  {
+   "title": "Final gear (shaft drive) oil change",
+   "related_issue": "routine maintenance",
+   "difficulty": 1,
+   "time": "20-30 min",
+   "tools": [
+    "socket/wrench for filler and drain plugs (size verify)",
+    "drain pan",
+    "squeeze bottle or syringe",
+    "new gaskets"
+   ],
+   "steps": [
+    "Ride briefly to warm the oil",
+    "Bike upright; remove filler plug first (so you know you can refill), then drain plug",
+    "Inspect drained oil and the magnetic drain plug for metal flakes",
+    "Reinstall drain plug with new gasket",
+    "Fill ~0.19 L SAE 80 GL-4 hypoid oil until level reaches bottom of filler threads (verify level spec)",
+    "Reinstall filler plug with new gasket; check for leaks"
+   ],
+   "safety": [
+    "Gear oil smells strongly; wear gloves",
+    "Don't overfill (seal leaks)"
+   ],
+   "videos": [
+    {
+     "title": "Yamaha VSTAR 650 Rear Gear Oil - Check, Inspect and Change",
+     "channel": "unverified",
+     "url": "https://www.youtube.com/watch?v=h0aQwRTgdNw"
+    },
+    {
+     "title": "2008 Yamaha V-Star 650 Final Gear Oil Change",
+     "channel": "unverified",
+     "url": "https://www.youtube.com/watch?v=BXZ5dhCPTb4"
+    },
+    {
+     "title": "How to change the Final drive oil on a Yamaha V-Star 650",
+     "channel": "unverified",
+     "url": "https://www.youtube.com/watch?v=B3x-LcELUaI"
+    },
+    {
+     "title": "Yamaha V-Star 650 Oil & Final Drive Change",
+     "channel": "unverified",
+     "url": "https://www.youtube.com/watch?v=3Ca54QwB_R4"
+    }
+   ],
+   "articles": [
+    {
+     "title": "Maintenance schedule (final gear oil notes)",
+     "url": "https://maintenanceschedule.com/?p=1749"
+    }
+   ]
+  },
+  {
+   "title": "Carburetor sync (balance)",
+   "related_issue": "rough idle / vibration",
+   "difficulty": 3,
+   "time": "1-1.5 hr",
+   "tools": [
+    "Carb sync tool (Morgan Carbtune, Motion Pro SyncPro, or dual vacuum gauges)",
+    "vacuum port caps/adapters",
+    "fan (air-cooled bike idling a long time)",
+    "long screwdriver for sync screw"
+   ],
+   "steps": [
+    "Warm engine fully",
+    "Remove vacuum caps/hoses from each intake and connect the gauges (one to the petcock vacuum line's port may need a tee; keep petcock fed or set to PRI if equipped)",
+    "Set idle to spec with the idle screw (verify spec, ~1,200 rpm typical)",
+    "Turn the synchronizing screw between the carbs until both readings match",
+    "Blip throttle, recheck; reset idle",
+    "Remove gauges, reinstall caps/hoses"
+   ],
+   "safety": [
+    "Run in a ventilated area",
+    "Don't let the engine idle for long without airflow (air-cooled)",
+    "Keep hands clear of hot exhaust"
+   ],
+   "videos": [
+    {
+     "title": "How to sync carbs on a V-Star 650",
+     "channel": "unverified",
+     "url": "https://www.youtube.com/watch?v=Axllq9wNIRE"
+    },
+    {
+     "title": "How to use the Carb Sync Tool on your Yamaha V-Star 650",
+     "channel": "unverified",
+     "url": "https://www.youtube.com/watch?v=Q-e2lAwOmfE"
+    },
+    {
+     "title": "Carburetor synchronize - 2005 Yamaha V-Star 650cc",
+     "channel": "unverified",
+     "url": "https://www.youtube.com/watch?v=1qPLzAUcZvQ"
+    },
+    {
+     "title": "How to make a Carb Sync Tool: Yamaha V-Star 650",
+     "channel": "unverified",
+     "url": "https://www.youtube.com/watch?v=hfFptZ5083Q"
+    }
+   ],
+   "articles": [
+    {
+     "title": "Technocoma: carb rebuild and sync (2 parts)",
+     "url": "https://technocoma.blogspot.com/p/star-vstar-dragstar-650-maintenance-and.html"
+    }
+   ]
+  }
+ ],
+ "tools": [
+  {
+   "name": "Carb sync tool",
+   "use_for": "Balancing the two Mikuni carbs",
+   "example": "Morgan Carbtune Pro (mercury-free, 2-4 cyl) or Motion Pro SyncPro; DIY clear-hose manometer works too",
+   "price_usd": null,
+   "links": [
+    {
+     "label": "DIY sync tool video",
+     "url": "https://www.youtube.com/watch?v=hfFptZ5083Q"
+    }
+   ],
+   "sources": [
+    "https://www.youtube.com/watch?v=Q-e2lAwOmfE"
+   ],
+   "notes": "Price not checked (scope cut); verify at RevZilla/Amazon."
+  },
+  {
+   "name": "Valve adjust tools",
+   "use_for": "Screw-and-locknut valve clearance (intake 0.004 in / 0.10 mm, exhaust 0.006 in / 0.15 mm per Technocoma; verify)",
+   "example": "Motion Pro tappet adjuster tool + metric feeler gauges; torque wrench (in-lb)",
+   "price_usd": null,
+   "links": [
+    {
+     "label": "Technocoma valve adjust series",
+     "url": "https://technocoma.blogspot.com/p/star-vstar-dragstar-650-maintenance-and.html"
+    }
+   ],
+   "sources": [
+    "https://technocoma.blogspot.com/p/star-vstar-dragstar-650-maintenance-and.html"
+   ],
+   "notes": "Locknut ~10 ft-lb, tappet covers ~7 ft-lb per Technocoma; verify in service manual."
+  },
+  {
+   "name": "Battery maintainer",
+   "use_for": "Winter storage / keeping AGM battery topped",
+   "example": "Battery Tender Jr (0.75 A) or NOCO Genius 1/2, with pigtail lead left on the battery",
+   "price_usd": null,
+   "links": [],
+   "sources": [],
+   "notes": "Prices not checked (scope cut). If you go lithium, use a maintainer with a lithium mode."
+  }
+ ],
+ "additives": [
+  {
+   "product": "Fuel stabilizer (Sta-Bil or Yamaha Stabilizer/Star Tronic)",
+   "use_for": "Winter storage of carbureted fuel",
+   "verdict": "use",
+   "why": "Carb bowls varnish fast on ethanol fuel; stabilize and run through the carbs, or drain the float bowls",
+   "how_often": "each storage season",
+   "price_usd": null,
+   "links": [],
+   "sources": [],
+   "notes": "[gk] Not researched in depth (scope cut)."
+  },
+  {
+   "product": "Yamaha Ring Free / Fuel Medic, Seafoam",
+   "use_for": "Fuel system cleaning",
+   "verdict": "maybe",
+   "why": "Can help mild varnish; won't clear a plugged pilot jet (that needs a carb clean)",
+   "how_often": "occasionally",
+   "price_usd": null,
+   "links": [],
+   "sources": [],
+   "notes": "[gk] unverified"
+  },
+  {
+   "product": "Oil additives (friction modifiers, MoS2)",
+   "use_for": "engine oil",
+   "verdict": "skip",
+   "why": "Shared wet-clutch oil; friction modifiers can cause clutch slip",
+   "how_often": "never",
+   "price_usd": null,
+   "links": [],
+   "sources": [
+    "https://manualshive.com/en/manual/yamaha/v-star-650/946866?page=8"
+   ],
+   "notes": "[gk]"
+  }
+ ]
+}

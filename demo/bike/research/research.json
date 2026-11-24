@@ -1,0 +1,695 @@
+{
+ "compiled": "2026-11-24. Scope cut mid-research to a demo/test vehicle: verified basics, schedule, 6 known issues, one NHTSA recall pass, one diagnosis plan.",
+ "vehicle": {
+  "year": 2007,
+  "make": "Yamaha",
+  "model": "V Star 650",
+  "trim": "unknown (Custom XVS650 / Classic XVS650A / Silverado XVS650AT)",
+  "mileage": null,
+  "vin": null,
+  "color": null,
+  "spec_source_note": "Primary source is the Yamaha XVS650Y/XVS650AY owner manual (model year 2009, 3B7-28199-23, printed Apr 2008), a public copy on cyclechaos.com (robots.txt allows reference use). It covers the Custom (XVS650) and Classic (XVS650A). It is a non-US edition (it lists an immobilizer, a carburetor heater fuse and km-based intervals), so items marked \"verify (US 2007)\" may differ on a US 2007 bike. The engine and drivetrain are unchanged 1998-2016 (general knowledge). The Silverado is not covered by this manual.",
+  "engine": "649 cc air-cooled 4-stroke SOHC 70-degree V-twin, 2 valves per cylinder, bore x stroke 81.0 x 63.0 mm, compression 9.0:1, electric start, wet sump (manual p.9-1; 70 degrees and 2 valves/cyl from moto-data.net)",
+  "carburetion": "Mikuni BDS28 x 2 (manual p.9-1). Some listings say \"BSR28\"; the manual says BDS28. Verify the stamped carb type on a US 2007 bike.",
+  "clutch": "Wet, multiple-disc, cable operated (manual p.9-1; cable from the chart item \"clutch: check operation, adjust\", p.7-2)",
+  "transmission": "Constant-mesh 5-speed, left foot shift. Ratios 2.714 / 1.900 / 1.458 / 1.167 / 0.967; primary 68/38 (1.789) (manual p.9-1, 9-2)",
+  "final_drive": "Shaft drive, secondary ratio 19/18 x 32/11 (3.071) (manual p.9-1). No chain or belt.",
+  "ignition": "TCI (digital transistor-controlled ignition); charging by AC magneto (stator) through a regulator/rectifier (manual p.9-3)",
+  "battery": "GT12B-4, 12 V 10.0 Ah, VRLA (sealed) per the 2009 manual (p.9-3). Common aftermarket cross: Yuasa YT12B-BS (general knowledge, verify fitment). Verify against the battery fitted: the request guessed YTX14-BS, which is NOT what the manual lists.",
+  "fuel": "Unleaded, RON 91 or higher (about 87 AKI pump octane in the US, general knowledge). Tank 16.0 L (4.23 US gal), reserve 3.0 L (0.79 US gal) (manual p.4-10, 9-1)",
+  "fuel_cock": "Manual fuel cock with OFF / ON / RES positions (manual p.4-11, 4-12). NOT a vacuum petcock on this manual's bikes: turn it to OFF whenever the engine is not running. Verify on the US 2007 bike.",
+  "choke": "Starter (choke) knob on the carburetors (enricher circuit); do not use it for more than 3 minutes (manual p.4-12)",
+  "spark_plug": "NGK DPR7EA-9 or Denso X22EPR-U9, gap 0.8-0.9 mm (0.031-0.035 in) (manual p.9-1)",
+  "idle_speed": "1150-1250 rpm, engine warm, set with the throttle stop screw (manual p.7-14)",
+  "throttle_free_play": "4.0-6.0 mm at the grip (manual p.7-14)",
+  "valve_clearance_cold": "NOT VERIFIED. Commonly quoted for the XVS650: intake 0.07-0.12 mm, exhaust 0.12-0.17 mm (general knowledge). The Yamaha service manual page on manualslib (p.66) confirms the check is done cold at TDC compression, but I could not read the values. Verify in the service manual before adjusting.",
+  "engine_oil": "API SG or higher, JASO MA. Viscosity by temperature: SAE 10W-30, 10W-40, 15W-40, 20W-40 or 20W-50 (chart also shows 10W-50). No \"CD\" diesel oils and no \"Energy Conserving II\" oils (clutch slip). (manual p.7-10, 9-1)",
+  "engine_oil_capacity": "Without filter change 2.60 L (2.75 US qt); with filter change 2.80 L (2.96 US qt) (manual p.7-10, 9-1). Total dry capacity not given in the owner manual (verify in the service manual).",
+  "oil_filter": "Cartridge element under a cover (2 cover bolts, 10 Nm), with an O-ring (manual p.7-9, 7-10). Aftermarket: Hiflofiltro HF145 (lists Yamaha OEM 5JX-13440-00, 4X7-13440-xx, 2H0-13440-90, 583-13440-10 as replaced numbers) and K&N KN-145. The OEM number for the 2007 US bike was not confirmed (verify; the request guessed 5GH-13440, which I found no source for).",
+  "shared_sump": "Yes. Wet sump; the manual says \"the engine oil also lubricates the clutch\", and the transmission runs in the same engine oil (no separate transmission oil in the spec list). Only the final drive has its own oil. (manual p.7-10, 9-1)",
+  "final_gear_oil": "SAE 80 API GL-4 hypoid gear oil (GL-5 or GL-6 hypoid also allowed), 0.19 L (0.20 US qt). Fill to the brim of the filler hole, bike upright, cold. (manual p.7-11, 9-1)",
+  "fork_oil": "From a manualslib copy of the XVS650 service manual (search snippet, OCR messy): Yamaha fork oil 10W, 454 cm3 (15.3 US oz) per leg, level 114 mm. VERIFY before use: I could not read the page itself.",
+  "brake_fluid": "DOT 4 (manual p.7-22, 9-2)",
+  "brakes": "Front: single hydraulic disc, right hand. Rear: drum, right foot (manual p.9-2, covers Custom and Classic). The Silverado shares the Classic chassis, so a rear drum is expected (general knowledge, verify).",
+  "tires": {
+   "type": "Tube type, spoke wheels (manual p.9-2)",
+   "custom_XVS650": "Front 100/90-19M/C 57S on 19 x MT2.50; rear 170/80-15M/C 77S on 15 x MT3.50. OE Bridgestone Exedra L309 / G546.",
+   "classic_XVS650A": "Front 130/90-16M/C 67S on 16 x MT3.00; rear 170/80-15M/C 77S. OE Dunlop D404F / D404G.",
+   "pressures_cold": "Custom: front 200 kPa (29 psi) solo and loaded. Classic: front 225 kPa (33 psi) solo and loaded. Rear, both: 225 kPa (33 psi) for 0-90 kg (0-198 lb) load, 250 kPa (36 psi) above 90 kg. Max load Custom 180 kg (397 lb), Classic 200 kg (441 lb).",
+   "source": "https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.9-2)"
+  },
+  "torque_specs": {
+   "engine_oil_drain_bolt": "43 Nm (31 ft-lb) (manual p.7-10)",
+   "oil_filter_cover_bolts": "10 Nm (7.2 ft-lb) (manual p.7-10)",
+   "final_gear_drain_bolt": "23 Nm (17 ft-lb) (manual p.7-11)",
+   "final_gear_filler_bolt": "23 Nm (17 ft-lb) (manual p.7-11)",
+   "spark_plugs": "Not in my extracted text; 17.5 Nm (13 ft-lb) is commonly quoted for this plug size (general knowledge, verify)",
+   "axle_nuts": "Not verified; see the service manual"
+  },
+  "dimensions_weights": "Custom: 233 kg (514 lb) with oil and fuel, seat 695 mm, wheelbase 1610 mm. Classic: 247 kg (545 lb), seat 710 mm, wheelbase 1625 mm (manual p.9-1, 2009 non-US spec)",
+  "fuses": "Main 30 A; headlight 15 A; signaling 10 A; ignition 10 A (manual p.9-3)",
+  "sources": [
+   "https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf",
+   "https://moto-data.net/yamaha/xvs-650-v-star-custom-2006-2007",
+   "https://cyclechaos.com/wiki/Yamaha_-Star_Custom",
+   "https://www.totalmotorcycle.com/photos/2007models/2007models-Yamaha-V-Star-650Custom/",
+   "https://www.totalmotorcycle.com/photos/2007models/2007models-Yamaha-V-Star-650Classic",
+   "https://maintenanceschedule.com/?p=1749",
+   "https://www.sportsbikeshop.co.uk/motorcycle_parts/content_prod/50820",
+   "https://www.knfilters.com/yamaha/xvs650-v-star-custom/650/2009",
+   "https://www.manualslib.com/manual/833178/Yamaha-Xvs650.html?page=356",
+   "https://manualslib.com/manual/833178/Yamaha-Xvs650.html?page=66"
+  ],
+  "motorcycle": {
+   "type": "cruiser",
+   "cooling": "air",
+   "fuel_system": "carbureted",
+   "clutch": "wet",
+   "final_drive": "shaft",
+   "shared_sump": true,
+   "jaso": "MA",
+   "variant_differences": {
+    "custom_XVS650": "19 in spoke front wheel (100/90-19), 15 in rear (170/80-15), footpegs, shorter bobbed fenders, lighter (233 kg wet per 2009 manual), front tire 29 psi. Rear drum brake.",
+    "classic_XVS650A": "16 in fat front tire (130/90-16), deep valanced fenders, floorboards and heel-toe shifter (general knowledge), heavier (247 kg wet), front tire 33 psi, higher max load. Rear drum brake.",
+    "silverado_XVS650AT": "Classic plus windshield, leather saddlebags and passenger backrest (general knowledge; not in the manual I read). Weight higher than the Classic (verify). Same engine, drivetrain, fluids and rear drum (verify).",
+    "how_to_tell": "19 in front wheel = Custom. Fat 16 in front, floorboards and big fenders = Classic. Classic plus windshield and bags from the factory = Silverado. The model code is on the VIN/model label (frame neck / under the seat).",
+    "sources": [
+     "https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf",
+     "https://www.totalmotorcycle.com/photos/2007models/2007models-Yamaha-V-Star-650Custom/",
+     "https://www.totalmotorcycle.com/photos/2007models/2007models-Yamaha-V-Star-650Classic"
+    ]
+   }
+  },
+  "owner_manual_fluids": {
+   "source": "Yamaha XVS650Y/XVS650AY Owner's Manual 3B7-28199-23 (2009 model year, non-US edition), public copy: https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf",
+   "engine_oil": "API SG+ / JASO MA; SAE 10W-30, 10W-40, 15W-40, 20W-40 or 20W-50 by ambient temperature; no CD diesel or Energy Conserving II oils; 2.60 L without filter, 2.80 L with filter (p.7-10, 9-1)",
+   "final_gear_oil": "SAE 80 API GL-4 hypoid (GL-5/GL-6 also OK), 0.19 L, to the brim of the filler hole; drain and filler bolts 23 Nm (p.7-11)",
+   "brake_fluid": "DOT 4; every 2 years replace fluid plus master cylinder and caliper internal parts; hoses every 4 years (p.7-5, 9-2)",
+   "fork_oil": "Not in the owner manual. Service manual (manualslib snippet, unverified): 10W, 454 cc per leg, level 114 mm https://www.manualslib.com/manual/833178/Yamaha-Xvs650.html?page=356",
+   "fuel": "Unleaded RON 91+, 16.0 L tank, 3.0 L reserve (p.4-10, 9-1)",
+   "spark_plugs": "NGK DPR7EA-9 / Denso X22EPR-U9, gap 0.8-0.9 mm (p.9-1)",
+   "battery": "GT12B-4 12 V 10 Ah VRLA; if stored more than 1 month remove and fully charge it, check and charge monthly if stored more than 2 months (p.7-26, 9-3)"
+  },
+  "owner_manual_schedule": {
+   "source_note": "Two sources. (1) The 2009 non-US owner manual chart (p.7-2 to 7-5): 1,000 km (600 mi), then every 10,000 km (6,000 mi), plus an annual check; repeat from 10,000 km after 50,000 km. Text extraction lost the column positions of the check marks, so I cannot say which items fall in which column. (2) maintenanceschedule.com, which says its table comes from the US owner manual: columns 4,000 / 8,000 / 12,000 / 16,000 / 20,000 mi = 6 / 12 / 18 / 24 / 30 months. The schedule below uses (2) for intervals and (1) for the fixed date items. The US initial 600 mi service is general knowledge for US Yamahas (verify).",
+   "us_chart_summary": "Every 4,000 mi/6 mo: oil change, plug check/clean, air filter clean, carb sync and idle, brakes, hoses, fuel hoses, clutch, final gear leak check, cables, wheels, tires, wheel and steering bearings, shock, fork, side stand/switch, crankcase breather, exhaust, lights. Every 8,000 mi/12 mo: oil filter, new plugs, swingarm check. 16,000 mi/24 mo: final gear oil change, repack steering and swingarm bearings. 20,000 mi: fuel filter. Valve clearance: 26,600 mi per that page (verify). https://maintenanceschedule.com/?p=1749",
+   "fixed_date_items": "Brake fluid plus master cylinder/caliper seals every 2 years; brake hoses every 4 years (p.7-5)",
+   "non_us_chart_extra": "Steering bearings lubricate every 20,000 km (12,000 mi); swingarm lubricate every 50,000 km (30,000 mi) (p.7-3)",
+   "pre_ride": "Final gear case must be checked for oil leakage before each ride (p.7-11)",
+   "storage": "Fuel cock OFF, drain both float bowls, fill tank with stabilizer, oil in the plug bores, lube cables, remove and charge battery (p.8-3, 8-4)"
+  }
+ },
+ "recalls": [
+  {
+   "campaign": "none found",
+   "date": "2026-11-24",
+   "component": "n/a",
+   "summary": "NHTSA files 2007 V Star models as \"V STAR\" (one model name for all displacements). recallsByVehicle for YAMAHA / V STAR / 2007 returns Count 0. Also 0 for V STAR 650, XVS650, V STAR 650 CLASSIC/CUSTOM/SILVERADO, V-STAR 650, VSTAR 650. NHTSA's 2007 Yamaha recall model list (https://api.nhtsa.gov/products/vehicle/models?modelYear=2007&make=YAMAHA&issueType=r) has no 650-specific entry. Other years list \"XVS650\" (1998, 2010) and \"SVS650\" (2000, 2005) under recalls, but I did not check those campaigns against a 2007 bike.",
+   "remedy": "Still run the VIN at nhtsa.gov/recalls and ask a Yamaha dealer: the API search by model name can miss campaigns filed under another name (general knowledge).",
+   "url": "https://api.nhtsa.gov/recalls/recallsByVehicle?make=YAMAHA&model=V%20STAR&modelYear=2007"
+  }
+ ],
+ "tsbs": [
+  {
+   "number": "none found",
+   "title": "No Yamaha service bulletins found for the 2007 V Star 650",
+   "summary": "Not searched in depth (scope cut to a demo vehicle). NHTSA manufacturer communications were not pulled. Treat as unknown, not as \"none exist\".",
+   "url": "https://api.nhtsa.gov/recalls/recallsByVehicle?make=YAMAHA&model=V%20STAR&modelYear=2007"
+  }
+ ],
+ "nhtsa_complaints": {
+  "total": 2,
+  "note": "Both are filed under the generic 2007 \"V STAR\" model, so the bike could be a 650, 950, 1100 or 1300. Neither says which.",
+  "items": [
+   {
+    "odi": "10627874",
+    "date": "2014-08-22",
+    "component": "POWER TRAIN",
+    "summary": "Final drive leaking oil out of the housing."
+   },
+   {
+    "odi": "10548475",
+    "date": "2013-10-05",
+    "component": "ELECTRICAL SYSTEM, ENGINE",
+    "summary": "Engine shut off at 50 mph with a passenger; would crank but not restart. Owner says forums show it is common (no cause given)."
+   }
+  ],
+  "crashes": 0,
+  "fires": 0,
+  "url": "https://api.nhtsa.gov/complaints/complaintsByVehicle?make=YAMAHA&model=V%20STAR&modelYear=2007"
+ },
+ "schedule": [
+  {
+   "item": "Engine oil change",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "US chart every 4,000 mi / 6 mo (maintenanceschedule.com, from the US manual). Initial change at 600 mi / 1 mo on a new bike. JASO MA, API SG+, 10W-40 or 20W-40 typical; 2.75 US qt without filter, 2.96 qt with. Drain bolt 43 Nm. Engine, gearbox and clutch share this oil. https://maintenanceschedule.com/?p=1749 https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-10)"
+  },
+  {
+   "item": "Engine oil filter (cartridge)",
+   "interval_miles": 8000,
+   "interval_months": 12,
+   "severe": false,
+   "source": "manual",
+   "notes": "Every second oil change per the US chart. HF145 / KN-145. Cover bolts 10 Nm, new O-ring. https://maintenanceschedule.com/?p=1749 https://www.sportsbikeshop.co.uk/motorcycle_parts/content_prod/50820"
+  },
+  {
+   "item": "Spark plugs: check, clean, regap",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "NGK DPR7EA-9, gap 0.8-0.9 mm. https://maintenanceschedule.com/?p=1749"
+  },
+  {
+   "item": "Spark plugs: replace",
+   "interval_miles": 8000,
+   "interval_months": 12,
+   "severe": false,
+   "source": "manual",
+   "notes": "NGK DPR7EA-9 or Denso X22EPR-U9 (2 plugs). https://maintenanceschedule.com/?p=1749 https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.9-1)"
+  },
+  {
+   "item": "Valve clearance check/adjust (cold)",
+   "interval_miles": 26600,
+   "interval_months": null,
+   "severe": false,
+   "source": "manual",
+   "notes": "Interval from maintenanceschedule.com (26,600 mi / 42,000 km), which looks long for a screw-and-locknut valvetrain; the non-US chart lists valves at several of its 6,000 mi columns. Verify in the US manual. Clearance values unverified (commonly 0.07-0.12 in / 0.12-0.17 ex mm, general knowledge). https://maintenanceschedule.com/?p=1749 https://manualslib.com/manual/833178/Yamaha-Xvs650.html?page=66"
+  },
+  {
+   "item": "Carburetor synchronization",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "Dealer item (needs vacuum gauges). https://maintenanceschedule.com/?p=1749 https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-4)"
+  },
+  {
+   "item": "Idle speed check/adjust",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "1150-1250 rpm warm, throttle stop screw. https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-14)"
+  },
+  {
+   "item": "Choke (starter) operation check",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "Chart item 24 (carburetors: check starter operation). https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-4)"
+  },
+  {
+   "item": "Air filter: clean (replace if damaged)",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "Dry element, tap and blow out with air. More often if wet/dusty. Drain the air filter check hose. https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-12) https://maintenanceschedule.com/?p=1749"
+  },
+  {
+   "item": "Final gear oil: leak check",
+   "interval_miles": null,
+   "interval_months": null,
+   "severe": false,
+   "source": "manual",
+   "notes": "Before each ride, and at each 4,000 mi service. https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-11)"
+  },
+  {
+   "item": "Final gear oil: change (shaft drive)",
+   "interval_miles": 16000,
+   "interval_months": 24,
+   "severe": false,
+   "source": "manual",
+   "notes": "SAE 80 GL-4 hypoid, 0.19 L (0.20 qt), to the brim of the filler hole. Bolts 23 Nm. Also changed at the 600 mi break-in service on a new bike (general knowledge, verify). https://maintenanceschedule.com/?p=1749 https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-11)"
+  },
+  {
+   "item": "Fork oil change",
+   "interval_miles": null,
+   "interval_months": 24,
+   "severe": false,
+   "source": "typical",
+   "notes": "Not in the owner manual chart (only \"check operation and leaks\"). 2 years is a common practice (general knowledge). Service manual snippet: 10W, 454 cc per leg, level 114 mm (verify). https://www.manualslib.com/manual/833178/Yamaha-Xvs650.html?page=356"
+  },
+  {
+   "item": "Front fork: check operation and leaks",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "https://maintenanceschedule.com/?p=1749"
+  },
+  {
+   "item": "Brake fluid change (DOT 4) + master cylinder/caliper seals",
+   "interval_miles": null,
+   "interval_months": 24,
+   "severe": false,
+   "source": "manual",
+   "notes": "Every 2 years. https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-5)"
+  },
+  {
+   "item": "Brake hoses: replace",
+   "interval_miles": null,
+   "interval_months": 48,
+   "severe": false,
+   "source": "manual",
+   "notes": "Every 4 years, or sooner if cracked. https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-5)"
+  },
+  {
+   "item": "Front brake pads: check",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "Replace at the wear limit. https://maintenanceschedule.com/?p=1749"
+  },
+  {
+   "item": "Rear drum brake shoes: check, adjust pedal free play",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "Wear indicator on the drum; replace shoes at the limit. https://maintenanceschedule.com/?p=1749 https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-3)"
+  },
+  {
+   "item": "Clutch: check operation, adjust cable free play",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "https://maintenanceschedule.com/?p=1749"
+  },
+  {
+   "item": "Steering bearings: check",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "https://maintenanceschedule.com/?p=1749"
+  },
+  {
+   "item": "Steering bearings: repack (lithium grease)",
+   "interval_miles": 16000,
+   "interval_months": 24,
+   "severe": false,
+   "source": "manual",
+   "notes": "US chart 16,000 mi; non-US chart every 12,000 mi. https://maintenanceschedule.com/?p=1749 https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-3)"
+  },
+  {
+   "item": "Swingarm pivot: check play / repack",
+   "interval_miles": 16000,
+   "interval_months": 24,
+   "severe": false,
+   "source": "manual",
+   "notes": "Check at 8,000 mi, repack at 16,000 mi (US chart); non-US: lubricate every 30,000 mi. https://maintenanceschedule.com/?p=1749"
+  },
+  {
+   "item": "Wheel bearings: check",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "https://maintenanceschedule.com/?p=1749"
+  },
+  {
+   "item": "Wheels: runout, spoke tightness",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "Spoke wheels: tighten spokes if needed. https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-3)"
+  },
+  {
+   "item": "Side stand and side stand switch",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "Check operation, lubricate the pivot. https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-4)"
+  },
+  {
+   "item": "Fuel hoses and fuel cock: check",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "https://maintenanceschedule.com/?p=1749 https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-2)"
+  },
+  {
+   "item": "Fuel filter: replace",
+   "interval_miles": 20000,
+   "interval_months": null,
+   "severe": false,
+   "source": "manual",
+   "notes": "Per maintenanceschedule.com; the non-US chart only says \"check condition\". https://maintenanceschedule.com/?p=1749"
+  },
+  {
+   "item": "Crankcase breather hose: check",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "https://maintenanceschedule.com/?p=1749"
+  },
+  {
+   "item": "Exhaust: leaks, clamps, gaskets",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "https://maintenanceschedule.com/?p=1749 https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-5)"
+  },
+  {
+   "item": "Cables and pivots: lubricate",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "Throttle grip and cable, clutch lever, brake/shift pedals, side stand. https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-4)"
+  },
+  {
+   "item": "Lights, signals, switches, brake light switches",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "https://maintenanceschedule.com/?p=1749"
+  },
+  {
+   "item": "Tires: tread depth, damage, pressure",
+   "interval_miles": 4000,
+   "interval_months": 6,
+   "severe": false,
+   "source": "manual",
+   "notes": "Check pressure cold before rides (general knowledge). Custom front 29 psi, Classic front 33 psi; rear 33 psi solo / 36 psi loaded. https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.9-2)"
+  },
+  {
+   "item": "Tire age replacement (by DOT date code)",
+   "interval_miles": null,
+   "interval_months": 60,
+   "severe": false,
+   "source": "typical",
+   "notes": "Date-only. Inspect from 5 years and replace around 5-6 years from the DOT date code regardless of tread (general knowledge; NHTSA says tires age even when unused). https://www.nhtsa.gov/equipment/tires"
+  },
+  {
+   "item": "Battery: storage charging / tending",
+   "interval_miles": null,
+   "interval_months": 1,
+   "severe": false,
+   "source": "manual",
+   "notes": "Date-only. If not ridden for more than a month, remove (or tend) and fully charge; check monthly during storage. https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf (manual p.7-26)"
+  }
+ ],
+ "known_issues": [
+  {
+   "title": "Gummed carburetors / clogged pilot jets after storage (ethanol fuel)",
+   "mileage_range": "any (age and storage, not miles)",
+   "symptoms": "Hard start, runs only on choke, will not idle, dies a few seconds after starting, fuel smell in the airbox. A used 2008 650 that sat 6 months cranked and died after 3-4 s.",
+   "fix": "Drain bowls; fresh fuel; remove carbs and clean pilot jets and passages (carb cleaner, fine wire, compressed air), new O-rings/gaskets; then sync and set idle. Prevent with fuel cock OFF, stabilizer and draining bowls for storage (manual p.8-3).",
+   "cost_diy": "$20-60 (cleaner, carb kit/pilot jets) (general knowledge)",
+   "cost_shop": "$50-150 per motoryk; a full two-carb clean and sync is often more (general knowledge)",
+   "urgency": "medium",
+   "sources": [
+    "https://www.motoryk.com/bikes/yamaha/v-star-650/problems",
+    "https://yamahaclub.com/forums/topic/46314-650-v-star-crank-no-start",
+    "https://www.revzilla.com/common-tread/spring-carb-cleaning-101",
+    "https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf"
+   ]
+  },
+  {
+   "title": "Regulator/rectifier failure, melted connector, battery drain",
+   "mileage_range": "any; age-related (unverified)",
+   "symptoms": "Battery goes flat, slow cranking, charging voltage low or over 15 V, melted or browned R/R or stator connector.",
+   "fix": "Test charging voltage at the battery (about 13.5-15 V at 5,000 rpm is a typical target, general knowledge, verify in the service manual); test the R/R diodes and stator; replace R/R and/or clean or replace the connector.",
+   "cost_diy": "$50-120 for an R/R (motoryk)",
+   "cost_shop": "$150-350 (general knowledge)",
+   "urgency": "high",
+   "sources": [
+    "https://www.motoryk.com/bikes/yamaha/v-star-650/problems",
+    "https://yamahaclub.com/forums/topic/25322-xvs650-wont-start"
+   ]
+  },
+  {
+   "title": "Oil leak from a cracked neutral switch housing (left side of the engine)",
+   "mileage_range": "older bikes (age, heat)",
+   "symptoms": "Oil running down the left side and onto the kickstand; drips on the floor. Often mistaken for a case-half leak.",
+   "fix": "Remove the two left covers, take out the 3 Torx bolts and replace the plastic neutral switch with a new O-ring.",
+   "cost_diy": "about $20 part",
+   "cost_shop": "$100-200 (general knowledge)",
+   "urgency": "medium",
+   "sources": [
+    "https://www.motorcyclecruiser.com/yamaha-v-star-650-common-oil-leak-fix/"
+   ]
+  },
+  {
+   "title": "Final drive (shaft) oil leak",
+   "mileage_range": "unknown",
+   "symptoms": "Oil on the final gear case, rear wheel or tire. NHTSA complaint 10627874 (2007 \"V STAR\", displacement unknown): final drive leaking out of the housing.",
+   "fix": "Check the level and the drain/filler bolt washers first; a seal leak needs a dealer (manual). Oil on the tire is a crash risk.",
+   "cost_diy": "$10-30 (gear oil, washers) (general knowledge)",
+   "cost_shop": "seal job $150-400 (general knowledge, unverified)",
+   "urgency": "high",
+   "sources": [
+    "https://api.nhtsa.gov/complaints/complaintsByVehicle?make=YAMAHA&model=V%20STAR&modelYear=2007",
+    "https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf"
+   ]
+  },
+  {
+   "title": "Fork seal leaks",
+   "mileage_range": "higher mileage",
+   "symptoms": "Oil film on the fork tubes below the seals, oil on the brake caliper, soft front end.",
+   "fix": "New fork seals and dust wipers, fresh fork oil.",
+   "cost_diy": "$40-80 (general knowledge)",
+   "cost_shop": "$100-250 (motoryk)",
+   "urgency": "medium",
+   "sources": [
+    "https://www.motoryk.com/bikes/yamaha/v-star-650/problems"
+   ]
+  },
+  {
+   "title": "Rear drum brake wear and adjustment",
+   "mileage_range": "any",
+   "symptoms": "Long pedal travel, weak rear brake; the wear indicator on the drum at the limit.",
+   "fix": "Adjust pedal free play; replace shoes at the limit.",
+   "cost_diy": "$40-100 (motoryk)",
+   "cost_shop": "$100-200 (general knowledge)",
+   "urgency": "medium",
+   "sources": [
+    "https://www.motoryk.com/bikes/yamaha/v-star-650/problems",
+    "https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf"
+   ]
+  }
+ ],
+ "symptom_diagnosis": [
+  {
+   "symptom": "Hard starting / will not idle / dies without choke",
+   "likely_causes": [
+    {
+     "cause": "Fuel cock in OFF, or tank on reserve and near empty",
+     "likelihood": "medium",
+     "how_to_check": "Lever position; fuel level",
+     "fix": "ON (or RES), fill up",
+     "cost": "$0"
+    },
+    {
+     "cause": "Stale fuel / varnish in the float bowls",
+     "likelihood": "high",
+     "how_to_check": "Smell; drain a float bowl into a clear jar",
+     "fix": "Fresh fuel, drain bowls",
+     "cost": "$0-20"
+    },
+    {
+     "cause": "Clogged pilot jets / idle passages",
+     "likelihood": "high",
+     "how_to_check": "Runs on choke only, idle drops off as choke goes off",
+     "fix": "Carb clean, new pilot jets",
+     "cost": "$20-60 DIY"
+    },
+    {
+     "cause": "Weak battery / slow cranking",
+     "likelihood": "medium",
+     "how_to_check": "Resting voltage (12.6 V full, general knowledge), cranking speed",
+     "fix": "Charge or replace GT12B-4",
+     "cost": "$0-80"
+    },
+    {
+     "cause": "Fouled or worn spark plugs",
+     "likelihood": "medium",
+     "how_to_check": "Pull and read; gap 0.8-0.9 mm",
+     "fix": "New DPR7EA-9",
+     "cost": "$10-20"
+    },
+    {
+     "cause": "Air leak at cracked intake boots",
+     "likelihood": "low-medium",
+     "how_to_check": "Look for cracks; spray test at idle",
+     "fix": "New boots",
+     "cost": "$30-80"
+    },
+    {
+     "cause": "Ignition fault (plug cap, coil, pickup)",
+     "likelihood": "low",
+     "how_to_check": "Spark test each cylinder",
+     "fix": "Cap/coil",
+     "cost": "$20-100"
+    }
+   ],
+   "sources": [
+    "https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf",
+    "https://www.motoryk.com/bikes/yamaha/v-star-650/problems",
+    "https://yamahaclub.com/forums/topic/46314-650-v-star-crank-no-start",
+    "https://www.revzilla.com/common-tread/spring-carb-cleaning-101"
+   ]
+  },
+  {
+   "symptom": "Battery keeps going flat / slow crank",
+   "likely_causes": [
+    {
+     "cause": "Old or sulfated battery",
+     "likelihood": "high",
+     "how_to_check": "Charge, rest 12 h, load test (general knowledge)",
+     "fix": "Battery",
+     "cost": "$50-80"
+    },
+    {
+     "cause": "Regulator/rectifier failure or melted connector",
+     "likelihood": "medium",
+     "how_to_check": "Charging voltage at 5,000 rpm; connector condition; diode test",
+     "fix": "R/R, connector",
+     "cost": "$50-120"
+    },
+    {
+     "cause": "Stator open/shorted",
+     "likelihood": "low-medium",
+     "how_to_check": "Stator resistance and AC output (service manual values)",
+     "fix": "Stator",
+     "cost": "$100-250 (general knowledge)"
+    },
+    {
+     "cause": "Parasitic draw (accessories, wiring)",
+     "likelihood": "low",
+     "how_to_check": "Ammeter in series, key off",
+     "fix": "Find circuit",
+     "cost": "varies"
+    }
+   ],
+   "sources": [
+    "https://www.motoryk.com/bikes/yamaha/v-star-650/problems",
+    "https://yamahaclub.com/forums/topic/25322-xvs650-wont-start",
+    "https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf"
+   ]
+  },
+  {
+   "symptom": "Oil on the left side / kickstand",
+   "likely_causes": [
+    {
+     "cause": "Cracked neutral switch housing",
+     "likelihood": "high",
+     "how_to_check": "Remove left covers, look at the switch",
+     "fix": "Switch + O-ring",
+     "cost": "$20"
+    }
+   ],
+   "sources": [
+    "https://www.motorcyclecruiser.com/yamaha-v-star-650-common-oil-leak-fix/"
+   ]
+  },
+  {
+   "symptom": "Oil at the rear wheel / final drive",
+   "likely_causes": [
+    {
+     "cause": "Final drive seal or bolt washer leak, overfilled case",
+     "likelihood": "medium",
+     "how_to_check": "Clean, ride, recheck; level at the filler brim",
+     "fix": "Washers/seal",
+     "cost": "$10-400"
+    }
+   ],
+   "sources": [
+    "https://api.nhtsa.gov/complaints/complaintsByVehicle?make=YAMAHA&model=V%20STAR&modelYear=2007",
+    "https://www.cyclechaos.com/images/2/26/2009_Yamaha_XVS650_Owners_Manual.pdf"
+   ]
+  }
+ ],
+ "recommendations": [
+  {
+   "priority": "now",
+   "item": "Confirm the variant (19 in front wheel = Custom; 16 in fat front + floorboards = Classic; plus factory windshield/bags = Silverado) and read the model code off the VIN label",
+   "why": "Tire size and front pressure differ by variant (29 vs 33 psi)",
+   "cost": "$0"
+  },
+  {
+   "priority": "now",
+   "item": "Read both tire DOT date codes; replace any tire older than about 5-6 years or cracked",
+   "why": "Tube-type tires on an old bike; age matters more than tread (general knowledge)",
+   "cost": "$0 to check; $250-450 a pair fitted (general knowledge)"
+  },
+  {
+   "priority": "now",
+   "item": "Run the VIN at nhtsa.gov/recalls and with a Yamaha dealer",
+   "why": "API by model name found 0 recalls, but VIN lookup is authoritative",
+   "cost": "$0"
+  },
+  {
+   "priority": "now",
+   "item": "Pre-ride check: tire pressure, final gear leak check, brakes, lights, oil level",
+   "why": "Manual requires a final gear leak check before each ride",
+   "cost": "$0"
+  },
+  {
+   "priority": "soon",
+   "item": "If service history is unknown: oil + HF145 filter, final gear oil, brake fluid (DOT 4), new DPR7EA-9 plugs, clean air filter",
+   "why": "Cheap baseline; all are time-based too",
+   "cost": "$60-100 DIY (general knowledge)"
+  },
+  {
+   "priority": "soon",
+   "item": "Load-test the battery and measure charging voltage",
+   "why": "R/R failure is the main electrical weak point",
+   "cost": "$0 with a multimeter"
+  },
+  {
+   "priority": "watch",
+   "item": "Left-side oil (neutral switch), fork seals, final drive leaks, rear drum wear",
+   "why": "Known weak points",
+   "cost": "n/a"
+  },
+  {
+   "priority": "decision",
+   "item": "Carb clean if it is hard to start or only runs on choke after fresh fuel",
+   "why": "Most common storage problem on this bike",
+   "cost": "$20-60 DIY / $150+ shop"
+  },
+  {
+   "priority": "skip",
+   "item": "Car oils labeled Energy Conserving II or diesel CD oils",
+   "why": "Manual: causes clutch slip (shared sump)",
+   "cost": "$0"
+  }
+ ],
+ "questions": [
+  "VIN and model code (XVS650 / XVS650A / XVS650AT)?",
+  "Which variant: 19 in front wheel (Custom) or 16 in with floorboards (Classic), windshield and bags (Silverado)?",
+  "Mileage and color?",
+  "When were the engine oil/filter and final gear oil last changed, and with what?",
+  "How is it stored: indoors, fuel stabilizer, float bowls drained, battery on a tender?",
+  "Tire DOT date codes (last 4 digits, week and year) front and rear?",
+  "Aftermarket exhaust, air filter or rejetting?",
+  "Any current problems: hard starting, needs choke to idle, flat battery, oil on the left side or the rear wheel?",
+  "Is the fuel cock a manual OFF/ON/RES lever (as in the manual)?"
+ ],
+ "unverified": [
+  "Valve clearances (values and interval)",
+  "Fork oil volume/level (snippet only)",
+  "US 2007 battery model (2009 non-US manual says GT12B-4)",
+  "US 2007 carburetor type (non-US manual says Mikuni BDS28)",
+  "OEM oil filter part number",
+  "Silverado weight and equipment",
+  "Starter clutch and stator failures: no V Star 650 source found, so not listed as known issues",
+  "Charging voltage spec and stator resistance values (service manual not read)"
+ ]
+}
